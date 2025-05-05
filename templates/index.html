@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Analisador de Comissões Linx - Início{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #17a2b8;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    .upload-area:hover {
+        background-color: rgba(23, 162, 184, 0.05);
+    }
+    .upload-icon {
+        font-size: 48px;
+        color: #17a2b8;
+        margin-bottom: 15px;
+    }
+    .file-input {
+        display: none;
+    }
+    .file-label {
+        cursor: pointer;
+        padding: 10px 20px;
+        background-color: #17a2b8;
+        color: white;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin-top: 10px;
+    }
+    .file-label:hover {
+        background-color: #138496;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .file-info {
+        margin-top: 15px;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .drop-text {
+        color: #6c757d;
+        margin-bottom: 15px;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 30px;
+        color: #6c757d;
+    }
+    .empty-icon {
+        font-size: 48px;
+        color: #17a2b8;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+    .table-actions .btn {
+        margin-right: 5px;
+    }
+    .file-name {
+        font-weight: 500;
+        color: #343a40;
+    }
+    .table-container {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    .dragging {
+        background-color: rgba(23, 162, 184, 0.1);
+        border-color: #138496;
+    }
+    .instructions-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #6c757d;
+    }
+    .instruction-step {
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .instruction-step:last-child {
+        border-bottom: none;
+    }
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: #17a2b8;
+        color: white;
+        font-weight: bold;
+        margin-right: 10px;
+    }
+    .feature-icon {
+        font-size: 24px;
+        color: #17a2b8;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-upload me-2"></i>Upload de Arquivo
+                </div>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="upload-form">
+                    <div class="upload-area" id="drop-area">
+                        <i class="fas fa-file-excel upload-icon"></i>
+                        <h5>Arraste e solte seu arquivo Excel aqui</h5>
+                        <p class="drop-text">ou</p>
+                        <input type="file" name="file" id="file" class="file-input" accept=".xls,.xlsx">
+                        <label for="file" class="file-label">
+                            <i class="fas fa-folder-open me-2"></i>Selecionar Arquivo
+                        </label>
+                        <p class="file-info mt-3" id="file-info">Nenhum arquivo selecionado</p>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                                <i class="fas fa-upload me-2"></i>Enviar Arquivo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>Formatos suportados: XLS, XLSX. A aplicação analisará os dados de comissões da Linx.</small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-file-alt me-2"></i>Arquivos Processados
+                </div>
+                <div>
+                    <input type="text" class="form-control form-control-sm" id="filtro-arquivo" placeholder="Filtrar arquivos...">
+                </div>
+            </div>
+            <div class="card-body">
+                {% if arquivos_processados %}
+                <div class="table-container">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nome do Arquivo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for arquivo in arquivos_processados %}
+                            <tr class="arquivo-row">
+                                <td class="file-name">{{ arquivo }}</td>
+                                <td class="table-actions">
+                                    <a href="{{ url_for('visualizar', filename=arquivo) }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i> Visualizar
+                                    </a>
+                                    <a href="{{ url_for('download', filename=arquivo) }}" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-download me-1"></i> Download
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-folder-open empty-icon"></i>
+                    <h5>Nenhum arquivo processado</h5>
+                    <p>Faça o upload de um arquivo Excel para começar a análise.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-lightbulb me-2"></i>Como Utilizar este Sistema
+            </div>
+            <div class="card-body p-0">
+                <div class="instructions-card">
+                    <div class="row g-0">
+                        <div class="col-md-6">
+                            <div class="instruction-step">
+                                <span class="step-number">1</span>
+                                <strong>Faça o upload do arquivo Excel</strong>
+                                <p class="mt-2 mb-0">Envie o arquivo com os dados de comissão da Linx (.xls ou .xlsx).</p>
+                            </div>
+                            
+                            <div class="instruction-step">
+                                <span class="step-number">2</span>
+                                <strong>Visualize as estatísticas e gráficos</strong>
+                                <p class="mt-2 mb-0">A aplicação processará o arquivo e exibirá análises detalhadas.</p>
+                            </div>
+                            
+                            <div class="instruction-step">
+                                <span class="step-number">3</span>
+                                <strong>Compare diferentes períodos</strong>
+                                <p class="mt-2 mb-0">Upload vários arquivos para comparar comissões de períodos diferentes.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="instruction-step">
+                                <span class="step-number">4</span>
+                                <strong>Identifique divergências</strong>
+                                <p class="mt-2 mb-0">Compare arquivos para verificar diferenças de valores e identificar inconsistências.</p>
+                            </div>
+                            
+                            <div class="instruction-step">
+                                <span class="step-number">5</span>
+                                <strong>Exporte os dados analisados</strong>
+                                <p class="mt-2 mb-0">Exporte relatórios em CSV para uso em outras ferramentas como Excel.</p>
+                            </div>
+                            
+                            <div class="instruction-step">
+                                <span class="step-number">6</span>
+                                <strong>Acesse de qualquer dispositivo</strong>
+                                <p class="mt-2 mb-0">Interface responsiva permite análise em computadores, tablets e smartphones.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-table me-2"></i>Colunas Analisadas
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-4">
+                            <h5><i class="fas fa-user feature-icon d-block"></i>Dados do Cliente</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    contato
+                                    <span class="badge bg-info rounded-pill">Franquia</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    clifor_cliente
+                                    <span class="badge bg-info rounded-pill">ID</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    nome_clifor
+                                    <span class="badge bg-info rounded-pill">Nome</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    cnpj_cliente
+                                    <span class="badge bg-info rounded-pill">CNPJ</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="mb-4">
+                            <h5><i class="fas fa-file-invoice feature-icon d-block"></i>Dados da Fatura</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    fatura
+                                    <span class="badge bg-warning rounded-pill">Número</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    codigo_item
+                                    <span class="badge bg-warning rounded-pill">Produto</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    emissao
+                                    <span class="badge bg-warning rounded-pill">Data</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    vencimento_real
+                                    <span class="badge bg-warning rounded-pill">Vencimento</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="mb-4">
+                            <h5><i class="fas fa-dollar-sign feature-icon d-block"></i>Dados Financeiros</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    valor_recebido_total
+                                    <span class="badge bg-success rounded-pill">Valor</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    percent_comissao_item_contrato
+                                    <span class="badge bg-success rounded-pill">%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    valor_comissao_total
+                                    <span class="badge bg-success rounded-pill">Comissão</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    valor_imposto
+                                    <span class="badge bg-success rounded-pill">Imposto</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    valor_menos_imposto
+                                    <span class="badge bg-success rounded-pill">Líquido</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Manipulação de arquivos e drag-and-drop
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('file');
+    const fileInfo = document.getElementById('file-info');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Prevenir comportamento padrão
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    // Adicionar classe quando arrastar sobre a área
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        dropArea.classList.add('dragging');
+    }
+    
+    function unhighlight() {
+        dropArea.classList.remove('dragging');
+    }
+    
+    // Lidar com arquivos soltos
+    dropArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFileInfo();
+        }
+    }
+    
+    // Atualizar informações do arquivo
+    fileInput.addEventListener('change', updateFileInfo);
+    
+    function updateFileInfo() {
+        if (fileInput.files.length > 0) {
+            const fileName = fileInput.files[0].name;
+            const fileSize = (fileInput.files[0].size / 1024).toFixed(2) + ' KB';
+            fileInfo.innerHTML = `<strong>${fileName}</strong> (${fileSize})`;
+            submitBtn.disabled = false;
+        } else {
+            fileInfo.textContent = 'Nenhum arquivo selecionado';
+            submitBtn.disabled = true;
+        }
+    }
+    
+    // Filtro de arquivos
+    const filtroArquivo = document.getElementById('filtro-arquivo');
+    if (filtroArquivo) {
+        filtroArquivo.addEventListener('keyup', function() {
+            const termo = this.value.toLowerCase();
+            const linhas = document.querySelectorAll('.arquivo-row');
+            
+            linhas.forEach(linha => {
+                const nomeArquivo = linha.querySelector('.file-name').textContent.toLowerCase();
+                
+                if (nomeArquivo.includes(termo)) {
+                    linha.style.display = '';
+                } else {
+                    linha.style.display = 'none';
+                }
+            });
+        });
+    }
+</script>
+{% endblock %}
