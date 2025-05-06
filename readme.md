@@ -50,7 +50,7 @@ Análise de dados: Math.js + Lodash
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/bi-comissao-linx.git
+git clone https://github.com/matheus-kas/bi_comissao_linx.git
 
 # Entre no diretório
 cd bi-comissao-linx
@@ -144,7 +144,7 @@ Este projeto está licenciado sob a [Licença MIT](LICENSE).
 
 <div align="center">
   <p>
-    Desenvolvido com ❤️ por <a href="https://ialinformatica.com.br">IAL SOLUÇÕES</a>
+    Desenvolvido com ❤️ por <a href="https://ialinformatica.com.br">GRUPO IAL SOLUÇÕES</a>
   </p>
   <p>
     <a href="mailto:matheus@ialinformatica.com.br">matheus@ialinformatica.com.br</a> | © 2025
