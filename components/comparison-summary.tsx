@@ -14,7 +14,12 @@ export function ComparisonSummary({ file1, file2 }: ComparisonSummaryProps) {
   const comparison = useMemo(() => {
     // Calcular diferenças
     const totalCommissionDiff = file2.summary.totalCommission - file1.summary.totalCommission
-    const totalCommissionPercent = (totalCommissionDiff / file1.summary.totalCommission) * 100
+    let totalCommissionPercent = 0
+    if (file1.summary.totalCommission !== 0) {
+      totalCommissionPercent = (totalCommissionDiff / file1.summary.totalCommission) * 100
+    } else if (file2.summary.totalCommission > 0) {
+      totalCommissionPercent = 100 // Se o valor anterior era 0 e agora é positivo, aumento de 100%
+    }
 
     const clientCountDiff = file2.summary.clientCount - file1.summary.clientCount
     const productCountDiff = file2.summary.productCount - file1.summary.productCount
@@ -46,6 +51,11 @@ export function ComparisonSummary({ file1, file2 }: ComparisonSummaryProps) {
   }, [file1, file2])
 
   const formatCurrency = (value: number) => {
+    // Verificar se o valor é um número válido
+    if (value === undefined || value === null || isNaN(value)) {
+      return "—"
+    }
+
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",

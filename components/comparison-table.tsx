@@ -28,7 +28,19 @@ export function ComparisonTable({ data, file1Name, file2Name }: ComparisonTableP
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
 
-  const formatCurrency = (value: number) => {
+  // Função para formatar valores monetários
+  const formatCurrency = (value: number | null | undefined) => {
+    // Se o valor for undefined ou null, retorne um traço
+    if (value === undefined || value === null) {
+      return "—"
+    }
+
+    // Se for NaN, retorne um traço
+    if (isNaN(value)) {
+      return "—"
+    }
+
+    // Formatar como moeda brasileira
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
@@ -49,7 +61,8 @@ export function ComparisonTable({ data, file1Name, file2Name }: ComparisonTableP
       accessorKey: file1Name,
       header: () => <div className="text-right">{file1Name}</div>,
       cell: ({ row }) => {
-        const amount = row.getValue(file1Name) as number
+        // Obter o valor diretamente do objeto original para evitar problemas de acesso
+        const amount = row.original[file1Name]
         return <div className="text-right font-medium">{formatCurrency(amount)}</div>
       },
     },
@@ -57,7 +70,8 @@ export function ComparisonTable({ data, file1Name, file2Name }: ComparisonTableP
       accessorKey: file2Name,
       header: () => <div className="text-right">{file2Name}</div>,
       cell: ({ row }) => {
-        const amount = row.getValue(file2Name) as number
+        // Obter o valor diretamente do objeto original para evitar problemas de acesso
+        const amount = row.original[file2Name]
         return <div className="text-right font-medium">{formatCurrency(amount)}</div>
       },
     },
@@ -116,8 +130,9 @@ export function ComparisonTable({ data, file1Name, file2Name }: ComparisonTableP
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const value1 = row.getValue(file1Name) as number
-        const value2 = row.getValue(file2Name) as number
+        // Obter os valores diretamente do objeto original
+        const value1 = row.original[file1Name]
+        const value2 = row.original[file2Name]
 
         if (value1 === 0 && value2 > 0) {
           return <div className="text-green-600 font-medium">Novo item</div>
@@ -134,8 +149,9 @@ export function ComparisonTable({ data, file1Name, file2Name }: ComparisonTableP
       accessorKey: "details",
       header: "Detalhes da Alteração",
       cell: ({ row }) => {
-        const value1 = row.getValue(file1Name) as number
-        const value2 = row.getValue(file2Name) as number
+        // Obter os valores diretamente do objeto original
+        const value1 = row.original[file1Name]
+        const value2 = row.original[file2Name]
         const percent = row.getValue("percentChange") as number
 
         if (value1 === 0 && value2 > 0) {

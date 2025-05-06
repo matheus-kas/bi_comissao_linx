@@ -25,6 +25,21 @@ interface MultiPeriodComparisonProps {
   files: ProcessedFile[]
 }
 
+interface EvolutionDataPoint {
+  name: string
+  period: string
+  fileName: string
+  totalCommission: number
+  clientCount: number
+  productCount: number
+}
+
+interface ClientEvolutionData {
+  name: string
+  total: number
+  [key: string]: string | number
+}
+
 export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
   const [chartType, setChartType] = useState<"line" | "bar">("line")
@@ -97,10 +112,13 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
     })
 
     // Para cada cliente, calcular o valor total em cada período
-    const clientData: Record<string, any>[] = []
+    const clientData: ClientEvolutionData[] = []
 
     allClients.forEach((client) => {
-      const clientInfo: Record<string, any> = { name: client }
+      const clientInfo: ClientEvolutionData = {
+        name: client,
+        total: 0,
+      }
 
       selectedFiles.forEach((file) => {
         // Calcular o total de comissões para este cliente neste arquivo
@@ -114,22 +132,14 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
         const periodKey = format(date, "MMM/yyyy", { locale: ptBR })
 
         clientInfo[periodKey] = clientTotal
+        clientInfo.total += clientTotal
       })
 
       clientData.push(clientInfo)
     })
 
     // Ordenar por valor total (soma de todos os períodos)
-    return clientData
-      .map((client) => {
-        const total = Object.entries(client)
-          .filter(([key]) => key !== "name")
-          .reduce((sum, [, value]) => sum + (value as number), 0)
-
-        return { ...client, total }
-      })
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10) // Top 10 clientes
+    return clientData.sort((a, b) => Number(b.total) - Number(a.total)).slice(0, 10) // Top 10 clientes
   }, [sortedFiles, selectedFileIds])
 
   const formatCurrency = (value: number) => {
@@ -283,9 +293,9 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                   <LineChart data={evolutionData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => formatValue(value)} />
+                    <YAxis tickFormatter={(value) => formatValue(Number(value))} />
                     <Tooltip
-                      formatter={(value) => [formatValue(value as number), getMetricLabel()]}
+                      formatter={(value) => [formatValue(Number(value)), getMetricLabel()]}
                       labelFormatter={(label) => {
                         const item = evolutionData.find((item) => item.name === label)
                         return `${item?.fileName} (${item?.period})`
@@ -306,9 +316,9 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                   <BarChart data={evolutionData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => formatValue(value)} />
+                    <YAxis tickFormatter={(value) => formatValue(Number(value))} />
                     <Tooltip
-                      formatter={(value) => [formatValue(value as number), getMetricLabel()]}
+                      formatter={(value) => [formatValue(Number(value)), getMetricLabel()]}
                       labelFormatter={(label) => {
                         const item = evolutionData.find((item) => item.name === label)
                         return `${item?.fileName} (${item?.period})`
@@ -333,20 +343,20 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                   {chartType === "line" ? (
                     <LineChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} data={evolutionData} />
-                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value) => [formatCurrency(value as number), "Comissão"]} />
+                      <XAxis dataKey="name" type="category" allowDuplicatedCategory={false} />
+                      <YAxis tickFormatter={(value) => formatCurrency(Number(value))} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Comissão"]} />
                       <Legend />
                       {clientEvolutionData.slice(0, 10).map((entry, index) => (
                         <Line
-                          key={entry.name}
+                          key={`${entry.name || "unknown"}-${index}`}
                           data={evolutionData.map((period) => ({
                             name: period.name,
-                            value: entry[period.name] || 0,
+                            value: Number(entry[period.name] || 0),
                           }))}
                           type="monotone"
                           dataKey="value"
-                          name={entry.name}
+                          name={String(entry.name || "unknown")}
                           stroke={generateColors(10)[index]}
                           strokeWidth={2}
                           dot={{ r: 4 }}
@@ -358,16 +368,16 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                     <BarChart data={evolutionData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
-                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                      <Tooltip formatter={(value) => [formatCurrency(value as number), "Comissão"]} />
+                      <YAxis tickFormatter={(value) => formatCurrency(Number(value))} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Comissão"]} />
                       <Legend />
                       {clientEvolutionData.slice(0, 5).map((entry, index) => (
                         <Bar
-                          key={entry.name}
-                          dataKey={(datum) => entry[datum.name] || 0}
-                          name={entry.name}
+                          key={`${entry.name || "unknown"}-${index}`}
+                          dataKey={(datum) => Number(entry[datum.name] || 0)}
+                          name={String(entry.name || "unknown")}
                           fill={generateColors(5)[index]}
-                          stackId={chartType === "stacked" ? "stack" : undefined}
+                          stackId={chartType === "bar" ? "stack" : undefined}
                         />
                       ))}
                     </BarChart>

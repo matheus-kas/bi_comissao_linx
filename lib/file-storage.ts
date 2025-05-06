@@ -1,8 +1,56 @@
 import { v4 as uuidv4 } from "uuid"
+import fs from "fs"
+import path from "path"
 import type { ProcessedFile } from "@/types/file-types"
 
 // Chave para armazenamento no localStorage
 const STORAGE_KEY = "processedFiles"
+
+// Diretório para armazenamento de arquivos
+const UPLOAD_DIR = path.join(process.cwd(), "uploads")
+
+// Função para obter o caminho do arquivo
+export function getFilePath(filename: string): string {
+  return path.join(UPLOAD_DIR, filename)
+}
+
+// Função para listar arquivos no diretório de uploads
+export function listFiles(): string[] {
+  try {
+    // Criar diretório se não existir
+    if (!fs.existsSync(UPLOAD_DIR)) {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+      return []
+    }
+
+    return fs.readdirSync(UPLOAD_DIR)
+  } catch (error) {
+    console.error("Erro ao listar arquivos:", error)
+    return []
+  }
+}
+
+// Função para salvar um arquivo no servidor
+export async function saveFile(buffer: Buffer, originalName: string): Promise<string> {
+  try {
+    // Criar diretório se não existir
+    if (!fs.existsSync(UPLOAD_DIR)) {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+    }
+
+    // Gerar nome único para o arquivo
+    const filename = `${Date.now()}-${uuidv4()}${path.extname(originalName)}`
+    const filePath = getFilePath(filename)
+
+    // Salvar o arquivo
+    fs.writeFileSync(filePath, buffer)
+
+    return filename
+  } catch (error) {
+    console.error("Erro ao salvar arquivo:", error)
+    throw new Error("Não foi possível salvar o arquivo")
+  }
+}
 
 // Função para salvar um arquivo processado
 export function saveProcessedFile(file: ProcessedFile): void {

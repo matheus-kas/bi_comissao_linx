@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { saveFile } from "@/lib/file-storage"
-import { processExcelFile } from "@/lib/file-processor"
+import { processFile } from "@/lib/file-processor"
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const savedFilename = await saveFile(buffer, file.name)
 
     // Processar o arquivo
-    const processedData = await processExcelFile(buffer, file.name)
+    const processedData = await processFile(file)
 
     // Adicionar o nome do arquivo salvo aos dados processados
     processedData.storedFilename = savedFilename
