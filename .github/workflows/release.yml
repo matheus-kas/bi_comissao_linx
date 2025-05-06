@@ -1,78 +1,110 @@
-name: Automatic Release
+name: Release Workflow
 
+# Acionado manualmente através da interface do GitHub
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versão para lançamento (ex: 1.0.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Notas de lançamento'
+        required: false
+        default: 'Veja os commits para detalhes das alterações'
+        type: string
+      is_prerelease:
+        description: 'É uma versão de pré-lançamento?'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  build:
-    name: Create Release
+  build-and-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Necessário para criar releases
+      packages: write  # Necessário para publicar pacotes
+    
     steps:
+      # Checkout do código com histórico completo para gerar changelog
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
+      
+      # Configuração do Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
-
+          registry-url: 'https://registry.npmjs.org'
+      
+      # Instalação de dependências
       - name: Install dependencies
         run: npm ci
-
+      
+      # Execução de testes
+      - name: Run tests
+        run: npm test
+        continue-on-error: ${{ github.event.inputs.is_prerelease == 'true' }}
+      
+      # Atualização da versão no package.json
+      - name: Update version in package.json
+        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+      
+      # Build do projeto
       - name: Build project
         run: npm run build
-
+      
+      # Geração automática de changelog
       - name: Generate changelog
         id: changelog
         uses: metcalfc/changelog-generator@v4.1.0
         with:
           myToken: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create ZIP archive
+      
+      # Commit e push das alterações
+      - name: Commit and push changes
         run: |
-          zip -r analisador-comissoes-linx-${{ github.ref_name }}.zip .next public package.json README.md LICENSE
-        
-      - name: Create Release
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add package.json package-lock.json
+          git commit -m "Bump version to ${{ github.event.inputs.version }}"
+          git tag v${{ github.event.inputs.version }}
+          git push origin HEAD:${{ github.ref_name }} --tags
+      
+      # Criação da release no GitHub
+      - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Analisador de Comissões Linx ${{ github.ref_name }}
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
           body: |
-            ## Analisador de Comissões Linx ${{ github.ref_name }}
+            ## Notas de lançamento
             
-            ### 📋 Changelog
+            ${{ github.event.inputs.release_notes }}
+            
+            ## Alterações desde a última versão
             
             ${{ steps.changelog.outputs.changelog }}
-            
-            ### 📦 Instalação
-            
-            ```bash
-            # Clone o repositório
-            git clone https://github.com/${{ github.repository }}.git
-            
-            # Entre no diretório
-            cd $(basename ${{ github.repository }})
-            
-            # Instale as dependências
-            npm install
-            
-            # Inicie o aplicativo
-            npm run dev
-            ```
-            
-            ### 📝 Notas da Versão
-            
-            Esta versão foi gerada automaticamente pelo GitHub Actions.
-            
           draft: false
-          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          prerelease: ${{ github.event.inputs.is_prerelease }}
           files: |
-            analisador-comissoes-linx-${{ github.ref_name }}.zip
+            dist/*.zip
+            dist/*.tar.gz
+      
+      # Publicação no NPM (opcional - remova se não for necessário)
+      - name: Publish to NPM
+        if: ${{ github.event.inputs.is_prerelease != 'true' }}
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      # Notificação de conclusão
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "::notice::Release v${{ github.event.inputs.version }} criada com sucesso!"
