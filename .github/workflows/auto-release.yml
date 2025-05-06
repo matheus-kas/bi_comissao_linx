@@ -1,5 +1,7 @@
 name: Auto Release
 
+# Acionado automaticamente em pushes para a branch principal
+# Ignora alterações em arquivos de documentação e outros workflows
 on:
   push:
     branches:
@@ -13,45 +15,92 @@ jobs:
   auto-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write  # Necessário para criar releases e tags
+      pull-requests: write  # Necessário para criar PRs de changelog
     
     steps:
+      # Checkout do código com histórico completo para gerar changelog
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
       
+      # Configuração do Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
       
+      # Instalação de dependências
       - name: Install dependencies
         run: npm ci
       
+      # Execução de testes
       - name: Run tests
         run: npm test
       
-      - name: Get version from package.json
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1
-      
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      # Determinar automaticamente o tipo de versão a ser incrementada
+      # Analisa os commits desde a última tag para decidir se é patch, minor ou major
+      - name: Determine version bump
+        id: version-bump
+        uses: phips28/gh-action-bump-version@master
+        with:
+          tag-prefix: 'v'
+          minor-wording: 'feat,feature'
+          major-wording: 'BREAKING,major'
+          patch-wording: 'fix,patch'
+          rc-wording: 'alpha,beta,rc'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Obter a nova versão determinada pelo passo anterior
+      - name: Get new version
+        id: get-version
+        run: echo "new_version=${{ steps.version-bump.outputs.newTag }}" >> $GITHUB_OUTPUT
+      
+      # Build do projeto
+      - name: Build project
+        run: npm run build
+      
+      # Gerar changelog automático baseado nos commits
+      - name: Generate changelog
+        id: changelog
+        uses: metcalfc/changelog-generator@v4.1.0
         with:
-          tag_name: v${{ steps.package-version.outputs.current-version }}
-          release_name: Release v${{ steps.package-version.outputs.current-version }}
-          draft: false
-          prerelease: false
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Criar release no GitHub
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get-version.outputs.new_version }}
+          name: Release ${{ steps.get-version.outputs.new_version }}
           body: |
             ## Alterações nesta versão
             
-            Versão automática gerada a partir do branch main.
+            ${{ steps.changelog.outputs.changelog }}
             
-            ### Commits incluídos
-            ${{ github.event.head_commit.message }}
+            Release automática gerada a partir do branch main.
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Publicar no NPM (opcional - remova se não for necessário)
+      - name: Publish to NPM
+        if: success()
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
+      # Notificação de conclusão
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "::notice::Auto-release ${{ steps.get-version.outputs.new_version }} criada com sucesso!"
