@@ -14,13 +14,6 @@ interface ComparisonToolProps {
   files: ProcessedFile[]
 }
 
-interface ComparisonItem {
-  name: string
-  difference: number
-  percentChange: number
-  [key: string]: string | number
-}
-
 export function ComparisonTool({ files }: ComparisonToolProps) {
   const [file1Id, setFile1Id] = useState<string>(files[0]?.id || "")
   const [file2Id, setFile2Id] = useState<string>(files.length > 1 ? files[1].id : "")
@@ -56,10 +49,11 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
       clientMap2.set(clientName, currentTotal + item.valor_comissao_total)
     })
 
-    // Combinar os clientes de ambos os arquivos
-    const allClients = new Set([...clientMap1.keys(), ...clientMap2.keys()])
+    const mergedData: any[] = []
 
-    const comparisonData: ComparisonItem[] = Array.from(allClients).map((client) => {
+    // Combinar dados de clientes
+    const allClients = new Set([...clientMap1.keys(), ...clientMap2.keys()])
+    allClients.forEach((client) => {
       const value1 = clientMap1.get(client) || 0
       const value2 = clientMap2.get(client) || 0
       const difference = value2 - value1
@@ -72,17 +66,18 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
         percentChange = 100 // Se o valor anterior era 0 e agora é positivo, aumento de 100%
       }
 
-      return {
+      mergedData.push({
         name: client,
         [file1.name]: value1,
         [file2.name]: value2,
+        arquivo1: value1, // Adicionar aliases para uso seguro
+        arquivo2: value2, // Adicionar aliases para uso seguro
         difference,
         percentChange,
-      }
+      })
     })
 
-    // Ordenar por valor total (soma dos dois arquivos)
-    return comparisonData.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference))
+    return mergedData
   }, [file1, file2])
 
   const productComparisonData = useMemo(() => {
@@ -104,10 +99,11 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
       productMap2.set(productName, currentTotal + item.valor_comissao_total)
     })
 
-    // Combinar os produtos de ambos os arquivos
-    const allProducts = new Set([...productMap1.keys(), ...productMap2.keys()])
+    const mergedData: any[] = []
 
-    const comparisonData: ComparisonItem[] = Array.from(allProducts).map((product) => {
+    // Combinar dados de produtos
+    const allProducts = new Set([...productMap1.keys(), ...productMap2.keys()])
+    allProducts.forEach((product) => {
       const value1 = productMap1.get(product) || 0
       const value2 = productMap2.get(product) || 0
       const difference = value2 - value1
@@ -120,17 +116,16 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
         percentChange = 100 // Se o valor anterior era 0 e agora é positivo, aumento de 100%
       }
 
-      return {
+      mergedData.push({
         name: product,
         [file1.name]: value1,
         [file2.name]: value2,
         difference,
         percentChange,
-      }
+      })
     })
 
-    // Ordenar por valor total (soma dos dois arquivos)
-    return comparisonData.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference))
+    return mergedData
   }, [file1, file2])
 
   return (
@@ -197,9 +192,7 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
                     <h3 className="font-medium">Novos Itens</h3>
                     <p className="text-2xl font-bold">
                       {file1 && file2
-                        ? clientComparisonData.filter(
-                            (item) => Number(item[file1.name]) === 0 && Number(item[file2.name]) > 0,
-                          ).length
+                        ? clientComparisonData.filter((item) => item[file1.name] === 0 && item[file2.name] > 0).length
                         : 0}
                     </p>
                   </div>
@@ -215,9 +208,7 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
                     <h3 className="font-medium">Itens Removidos</h3>
                     <p className="text-2xl font-bold">
                       {file1 && file2
-                        ? clientComparisonData.filter(
-                            (item) => Number(item[file1.name]) > 0 && Number(item[file2.name]) === 0,
-                          ).length
+                        ? clientComparisonData.filter((item) => item[file1.name] > 0 && item[file2.name] === 0).length
                         : 0}
                     </p>
                   </div>
@@ -234,10 +225,7 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
                     <p className="text-2xl font-bold">
                       {file1 && file2
                         ? clientComparisonData.filter(
-                            (item) =>
-                              Number(item[file1.name]) > 0 &&
-                              Number(item[file2.name]) > 0 &&
-                              Math.abs(item.percentChange) > 10,
+                            (item) => item[file1.name] > 0 && item[file2.name] > 0 && Math.abs(item.percentChange) > 10,
                           ).length
                         : 0}
                     </p>
@@ -248,7 +236,13 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
                 </CardContent>
               </Card>
             </div>
-            <ComparisonTable data={clientComparisonData} file1Name={file1?.name || ""} file2Name={file2?.name || ""} />
+            <ComparisonTable
+              data={clientComparisonData}
+              file1Name={file1?.name || "Arquivo 1"}
+              file2Name={file2?.name || "Arquivo 2"}
+              file1Alias="arquivo1"
+              file2Alias="arquivo2"
+            />
           </TabsContent>
         </Tabs>
       ) : (

@@ -53,7 +53,7 @@ export function ComparisonSummary({ file1, file2 }: ComparisonSummaryProps) {
   const formatCurrency = (value: number) => {
     // Verificar se o valor é um número válido
     if (value === undefined || value === null || isNaN(value)) {
-      return "—"
+      return "R$ 0,00"
     }
 
     return new Intl.NumberFormat("pt-BR", {

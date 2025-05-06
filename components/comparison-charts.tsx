@@ -10,11 +10,6 @@ interface ComparisonChartsProps {
   file2: ProcessedFile
 }
 
-interface ChartDataItem {
-  name: string
-  [key: string]: string | number
-}
-
 export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
   // Dados para o gráfico de barras - Top 5 clientes por comissão
   const topClientsComparison = useMemo(() => {
@@ -37,7 +32,7 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
     // Combinar os top clientes de ambos os arquivos
     const allClients = new Set([...clientMap1.keys(), ...clientMap2.keys()])
 
-    const comparisonData: ChartDataItem[] = Array.from(allClients).map((client) => ({
+    const comparisonData = Array.from(allClients).map((client) => ({
       name: client,
       [file1.name]: clientMap1.get(client) || 0,
       [file2.name]: clientMap2.get(client) || 0,
@@ -46,9 +41,13 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
     // Ordenar por valor total (soma dos dois arquivos)
     return comparisonData
       .sort((a, b) => {
-        const bTotal = Number(b[file1.name] || 0) + Number(b[file2.name] || 0)
-        const aTotal = Number(a[file1.name] || 0) + Number(a[file2.name] || 0)
-        return bTotal - aTotal
+        // Garantir que os valores sejam tratados como números
+        const aValue1 = Number(a[file1.name]) || 0
+        const aValue2 = Number(a[file2.name]) || 0
+        const bValue1 = Number(b[file1.name]) || 0
+        const bValue2 = Number(b[file2.name]) || 0
+        
+        return (bValue1 + bValue2) - (aValue1 + aValue2)
       })
       .slice(0, 5)
   }, [file1, file2])
@@ -74,7 +73,7 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
     // Combinar os top produtos de ambos os arquivos
     const allProducts = new Set([...productMap1.keys(), ...productMap2.keys()])
 
-    const comparisonData: ChartDataItem[] = Array.from(allProducts).map((product) => ({
+    const comparisonData = Array.from(allProducts).map((product) => ({
       name: product,
       [file1.name]: productMap1.get(product) || 0,
       [file2.name]: productMap2.get(product) || 0,
@@ -83,19 +82,18 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
     // Ordenar por valor total (soma dos dois arquivos)
     return comparisonData
       .sort((a, b) => {
-        const bTotal = Number(b[file1.name] || 0) + Number(b[file2.name] || 0)
-        const aTotal = Number(a[file1.name] || 0) + Number(a[file2.name] || 0)
-        return bTotal - aTotal
+        // Garantir que os valores sejam tratados como números
+        const aValue1 = Number(a[file1.name]) || 0
+        const aValue2 = Number(a[file2.name]) || 0
+        const bValue1 = Number(b[file1.name]) || 0
+        const bValue2 = Number(b[file2.name]) || 0
+        
+        return (bValue1 + bValue2) - (aValue1 + aValue2)
       })
       .slice(0, 5)
   }, [file1, file2])
 
   const formatCurrency = (value: number) => {
-    // Verificar se o valor é um número válido
-    if (value === undefined || value === null || isNaN(value)) {
-      return "—"
-    }
-
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
@@ -117,7 +115,7 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
               <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} />
               <YAxis tickFormatter={formatCurrency} />
               <Tooltip
-                formatter={(value) => [formatCurrency(Number(value)), "Comissão"]}
+                formatter={(value) => [formatCurrency(value as number), "Comissão"]}
                 labelStyle={{ fontWeight: "bold" }}
               />
               <Legend />
@@ -139,7 +137,7 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
               <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} />
               <YAxis tickFormatter={formatCurrency} />
               <Tooltip
-                formatter={(value) => [formatCurrency(Number(value)), "Comissão"]}
+                formatter={(value) => [formatCurrency(value as number), "Comissão"]}
                 labelStyle={{ fontWeight: "bold" }}
               />
               <Legend />
