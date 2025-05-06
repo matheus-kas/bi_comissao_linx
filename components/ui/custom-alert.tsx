@@ -10,7 +10,7 @@ const alertVariants = cva(
       variant: {
         default: "bg-background text-foreground",
         destructive: "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        warning: "border-amber-200 text-amber-800 dark:border-amber-800 [&>svg]:text-amber-600", // Adicione esta linha
+        warning: "border-amber-200 text-amber-800 dark:border-amber-800 [&>svg]:text-amber-600",
       },
     },
     defaultVariants: {
@@ -20,7 +20,7 @@ const alertVariants = cva(
 )
 
 interface AlertProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof alertVariants> {
-  variant?: "default" | "destructive" | "warning" // Adicione "warning" aqui
+  variant?: "default" | "destructive" | "warning"
 }
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(({ className, variant, ...props }, ref) => (

@@ -2,72 +2,65 @@ import * as XLSX from "xlsx"
 import { v4 as uuidv4 } from "uuid"
 import type { ProcessedFile, CommissionData } from "@/types/file-types"
 
+// Vamos modificar a função processFile para garantir que os valores sejam lidos corretamente
+// Substitua a função processFile existente por esta versão melhorada:
+
 export async function processFile(file: File): Promise<ProcessedFile> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
 
     reader.onload = async (e) => {
       try {
-        // Primeira tentativa - método padrão
-        let workbook
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer)
-          workbook = XLSX.read(data, { type: "array" })
-        } catch (error) {
-          console.log("Erro no método padrão, tentando método alternativo...", error)
+        // Obter o ArrayBuffer do arquivo
+        const arrayBuffer = e.target?.result as ArrayBuffer
 
-          // Segunda tentativa - com opções diferentes
-          try {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer)
-            workbook = XLSX.read(data, {
-              type: "array",
-              cellFormula: false, // Desabilitar fórmulas
-              cellStyles: false, // Desabilitar estilos
-              cellNF: false, // Desabilitar formatos numéricos
-              cellDates: true, // Manter datas
-              WTF: true, // Modo "What The Formula" - ignora erros
-            })
-          } catch (secondError) {
-            console.log("Erro no método alternativo, tentando método de texto...", secondError)
+        // Ler o arquivo Excel com configurações específicas para preservar os valores originais
+        const data = new Uint8Array(arrayBuffer)
+        const workbook = XLSX.read(data, {
+          type: "array",
+          cellDates: true,
+          cellNF: false,
+          cellText: false,
+          raw: true, // Importante: ler valores brutos
+        })
 
-            // Terceira tentativa - converter para base64
-            try {
-              const data = e.target?.result
-              const base64 = btoa(
-                new Uint8Array(data as ArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ""),
-              )
-              workbook = XLSX.read(base64, { type: "base64", WTF: true })
-            } catch (thirdError) {
-              throw new Error(`Não foi possível processar o arquivo. Erro: ${thirdError.message}`)
-            }
-          }
-        }
-
-        // Processamento do workbook
+        // Obter a primeira planilha
         const firstSheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[firstSheetName]
 
-        // Verificar se o arquivo tem a estrutura esperada
+        // Converter para JSON com opções para preservar valores originais
         const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-          raw: false,
-          dateNF: "yyyy-mm-dd",
+          raw: true, // Ler valores brutos
+          defval: "",
+          header: "A", // Usar letras como cabeçalhos para garantir que lemos os dados brutos
         })
 
-        // Verificar se há pelo menos um registro
-        if (jsonData.length === 0) {
-          throw new Error(
-            "O arquivo não contém dados. Verifique se a planilha está vazia ou se os dados estão na primeira aba.",
-          )
+        console.log("Dados brutos (primeiros 3 registros):", jsonData.slice(0, 3))
+
+        // Mapear cabeçalhos para índices de coluna
+        const headerRow = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] as string[]
+        const headerMap = new Map<string, string>()
+
+        headerRow.forEach((header, index) => {
+          const colLetter = XLSX.utils.encode_col(index)
+          headerMap.set(header.toLowerCase().trim(), colLetter)
+        })
+
+        console.log("Mapeamento de cabeçalhos:", Object.fromEntries(headerMap))
+
+        // Processar os dados usando o mapeamento de cabeçalhos
+        const processedData = processRecordsWithHeaders(jsonData, headerMap, headerRow)
+
+        // Verificar se temos dados
+        if (processedData.length === 0) {
+          throw new Error("Não foi possível extrair dados do arquivo. Verifique se o formato está correto.")
         }
 
-        // Processar os dados
-        const records = processRecords(jsonData as CommissionData[])
-
-        // Extrair informações do período
-        const period = extractPeriod(records)
+        // Extrair período
+        const period = extractPeriod(processedData)
 
         // Calcular estatísticas
-        const summary = calculateSummary(records)
+        const summary = calculateSummary(processedData)
 
         // Criar objeto de arquivo processado
         const processedFile: ProcessedFile = {
@@ -77,25 +70,18 @@ export async function processFile(file: File): Promise<ProcessedFile> {
           size: file.size,
           uploadDate: new Date().toISOString(),
           period,
-          data: records,
+          data: processedData,
           summary,
         }
 
-        // Armazenar arquivo original (opcional)
-        // Em um cenário real, você poderia salvar o arquivo original em um servidor ou serviço de armazenamento
+        // Imprimir alguns dados para depuração
+        console.log("Resumo:", summary)
+        console.log("Amostra de dados processados (primeiros 3 registros):", processedData.slice(0, 3))
 
         resolve(processedFile)
       } catch (error) {
         console.error("Erro ao processar arquivo:", error)
-        reject(
-          new Error(`Falha ao processar o arquivo: ${error instanceof Error ? error.message : "Erro desconhecido"}. 
-          
-          Sugestões:
-          1. Verifique se o arquivo está corrompido
-          2. Tente salvar o arquivo em um formato mais recente (.xlsx)
-          3. Remova elementos complexos como macros, fórmulas avançadas ou objetos incorporados
-          4. Se possível, exporte os dados para CSV e tente novamente`),
-        )
+        reject(new Error(`Falha ao processar o arquivo: ${error instanceof Error ? error.message : String(error)}`))
       }
     }
 
@@ -107,140 +93,125 @@ export async function processFile(file: File): Promise<ProcessedFile> {
   })
 }
 
-function processRecords(jsonData: any[]): CommissionData[] {
-  return jsonData.map((row, index) => {
+// Adicione esta nova função para processar registros usando o mapeamento de cabeçalhos
+function processRecordsWithHeaders(
+  jsonData: any[],
+  headerMap: Map<string, string>,
+  headerRow: string[],
+): CommissionData[] {
+  // Função auxiliar para extrair valor de uma célula específica
+  const extractValue = (row: any, headerKey: string): any => {
+    const colLetter = headerMap.get(headerKey.toLowerCase().trim())
+    if (!colLetter) {
+      console.warn(`Cabeçalho não encontrado: ${headerKey}`)
+      return null
+    }
+    return row[colLetter]
+  }
+
+  // Função para processar valor numérico com segurança
+  const processNumericValue = (value: any): number => {
+    if (value === undefined || value === null || value === "") return 0
+
+    // Se já for um número, retornar diretamente
+    if (typeof value === "number") return value
+
+    // Se for string, converter para número com cuidado
+    if (typeof value === "string") {
+      // Remover símbolos de moeda e converter vírgula para ponto
+      const valueStr = value
+        .replace(/[R$\s]/g, "") // Remover R$ e espaços
+        .replace(/\./g, "") // Remover pontos de milhar
+        .replace(",", ".") // Substituir vírgula decimal por ponto
+
+      return Number.parseFloat(valueStr) || 0
+    }
+
+    // Tentar converter outros tipos
+    return Number(value) || 0
+  }
+
+  return jsonData.slice(1).map((row, index) => {
+    // Pular a primeira linha (cabeçalhos)
     try {
-      // Normalizar nomes de colunas (caso haja variações)
-      const clienteKey = findKey(row, [
-        "CLIENTE",
-        "Cliente",
-        "cliente",
-        "RAZÃO SOCIAL",
-        "Razão Social",
-        "nome_clifor",
-        "NOME_CLIFOR",
-      ])
-      const cnpjKey = findKey(row, ["CNPJ", "Cnpj", "cnpj", "CNPJ_CLIENTE", "cnpj_cliente"])
-      const produtoKey = findKey(row, [
-        "PRODUTO",
-        "Produto",
-        "produto",
-        "DESCRIÇÃO",
-        "Descrição",
-        "codigo_item",
-        "CODIGO_ITEM",
-      ])
-      const valorKey = findKey(row, [
-        "VALOR",
-        "Valor",
-        "valor",
-        "COMISSÃO",
-        "Comissão",
-        "COMISSAO",
-        "valor_comissao_total",
-        "VALOR_COMISSAO_TOTAL",
-      ])
-      const dataKey = findKey(row, [
-        "DATA",
-        "Data",
-        "data",
-        "DATA EMISSÃO",
-        "Data Emissão",
-        "EMISSÃO",
-        "emissao",
-        "EMISSAO",
-      ])
-      const percentKey = findKey(row, [
-        "PERCENTUAL",
-        "Percentual",
-        "percentual",
-        "PERCENT_COMISSAO",
-        "percent_comissao_item_contrato",
-      ])
+      // Extrair valores usando o mapeamento de cabeçalhos
+      const nome_clifor = extractValue(row, "nome_clifor") || ""
+      const cnpj_cliente = extractValue(row, "cnpj_cliente") || ""
+      const codigo_item = extractValue(row, "codigo_item") || ""
+      const fatura = extractValue(row, "fatura") || ""
 
-      // Extrair valores com fallbacks
-      const cliente = row[clienteKey] || "Desconhecido"
-      const cnpj = row[cnpjKey] || ""
-      const produto = row[produtoKey] || "Desconhecido"
-      const fatura = row["fatura"] || row["FATURA"] || ""
+      // Processar valores numéricos com cuidado
+      const valor_recebido_total = processNumericValue(extractValue(row, "valor_recebido_total"))
+      const percent_comissao_item_contrato = processNumericValue(extractValue(row, "percent_comissao_item_contrato"))
+      const valor_comissao_total = processNumericValue(extractValue(row, "valor_comissao_total"))
 
-      // Converter valor para número
-      let valor = 0
-      if (row[valorKey]) {
-        // Remover símbolos de moeda e converter vírgula para ponto
-        const valorStr = String(row[valorKey])
-          .replace(/[^\d,-]/g, "")
-          .replace(",", ".")
-        valor = Number.parseFloat(valorStr) || 0
-      }
+      // Processar outros valores numéricos
+      const taxa_imposto = processNumericValue(extractValue(row, "taxa_imposto"))
+      const valor_imposto = processNumericValue(extractValue(row, "valor_imposto"))
+      const valor_a_pagar_sem_imposto = processNumericValue(extractValue(row, "valor_a_pagar_sem_imposto"))
+      const valor_menos_imposto = processNumericValue(extractValue(row, "valor_menos_imposto"))
 
-      // Converter percentual
-      let percentual = 0
-      if (row[percentKey]) {
-        const percentStr = String(row[percentKey])
-          .replace(/[^\d,-]/g, "")
-          .replace(",", ".")
-        percentual = Number.parseFloat(percentStr) || 0
-      }
-
-      // Converter data
-      let data = null
-      if (row[dataKey]) {
-        // Tentar diferentes formatos de data
+      // Processar data de emissão
+      let emissao = new Date().toISOString()
+      const emissaoValue = extractValue(row, "emissao")
+      if (emissaoValue) {
         try {
           // Se já for um objeto Date
-          if (row[dataKey] instanceof Date) {
-            data = row[dataKey]
+          if (emissaoValue instanceof Date) {
+            emissao = emissaoValue.toISOString()
           } else {
-            // Tentar converter string para data
-            const dataStr = String(row[dataKey])
-            data = new Date(dataStr)
+            // Tentar converter para data
+            const dataStr = String(emissaoValue)
 
-            // Se a data for inválida, tentar outros formatos
-            if (isNaN(data.getTime())) {
-              // Formato DD/MM/YYYY
-              const parts = dataStr.split(/[/.-]/)
-              if (parts.length === 3) {
-                // Assumir DD/MM/YYYY se o primeiro número for <= 31
-                if (Number.parseInt(parts[0]) <= 31) {
-                  data = new Date(Number.parseInt(parts[2]), Number.parseInt(parts[1]) - 1, Number.parseInt(parts[0]))
-                } else {
-                  // Assumir YYYY/MM/DD
-                  data = new Date(Number.parseInt(parts[0]), Number.parseInt(parts[1]) - 1, Number.parseInt(parts[2]))
+            // Verificar formato DD/MM/YYYY
+            const parts = dataStr.split(/[/.-]/)
+            if (parts.length === 3) {
+              // Assumir DD/MM/YYYY se o primeiro número for <= 31
+              if (Number.parseInt(parts[0]) <= 31) {
+                const date = new Date(
+                  Number.parseInt(parts[2]),
+                  Number.parseInt(parts[1]) - 1,
+                  Number.parseInt(parts[0]),
+                )
+                if (!isNaN(date.getTime())) {
+                  emissao = date.toISOString()
                 }
+              }
+            } else {
+              // Tentar formato padrão
+              const date = new Date(dataStr)
+              if (!isNaN(date.getTime())) {
+                emissao = date.toISOString()
               }
             }
           }
         } catch (e) {
-          console.warn(`Não foi possível converter a data: ${row[dataKey]}`)
-          data = new Date() // Usar data atual como fallback
+          console.warn(`Não foi possível converter a data: ${emissaoValue}`)
         }
-      } else {
-        data = new Date() // Usar data atual como fallback
       }
 
       // Criar objeto de registro normalizado
       return {
         id: uuidv4(),
-        nome_clifor: cliente,
-        cnpj_cliente: cnpj,
-        codigo_item: produto,
-        valor_comissao_total: valor,
-        percent_comissao_item_contrato: percentual,
-        emissao: data ? data.toISOString() : new Date().toISOString(),
-        fatura: fatura,
-        valor_recebido_total: row["valor_recebido_total"] || 0,
-        contato: row["contato"] || "",
-        clifor_cliente: row["clifor_cliente"] || "",
-        vencimento_real: row["vencimento_real"] || "",
-        taxa_imposto: row["taxa_imposto"] || 0,
-        valor_imposto: row["valor_imposto"] || 0,
-        valor_a_pagar_sem_imposto: row["valor_a_pagar_sem_imposto"] || 0,
-        valor_menos_imposto: row["valor_menos_imposto"] || 0,
-        rawData: row, // Manter dados brutos para referência
+        nome_clifor,
+        cnpj_cliente,
+        codigo_item,
+        valor_comissao_total,
+        percent_comissao_item_contrato,
+        emissao,
+        fatura,
+        valor_recebido_total,
+        contato: extractValue(row, "contato") || "",
+        clifor_cliente: extractValue(row, "clifor_cliente") || "",
+        vencimento_real: extractValue(row, "vencimento_real") || "",
+        taxa_imposto,
+        valor_imposto,
+        valor_a_pagar_sem_imposto,
+        valor_menos_imposto,
+        rawData: row,
       }
     } catch (error) {
-      console.error(`Erro ao processar linha ${index}:`, error)
+      console.error(`Erro ao processar linha ${index + 2}:`, error)
       // Retornar um registro com valores padrão em caso de erro
       return {
         id: uuidv4(),
@@ -265,21 +236,33 @@ function processRecords(jsonData: any[]): CommissionData[] {
   })
 }
 
-function findKey(obj: any, possibleKeys: string[]): string {
-  for (const key of possibleKeys) {
-    if (obj[key] !== undefined) {
-      return key
-    }
-  }
-  return possibleKeys[0] // Retornar a primeira chave como fallback
+// Função para extrair valor numérico
+function parseNumericValue(value: any): number {
+  if (value === undefined || value === null || value === "") return 0
+
+  // Se já for um número
+  if (typeof value === "number") return value
+
+  // Se for string, converter para número
+  const valueStr = String(value)
+    .replace(/[R$\s%]/g, "") // Remover R$, % e espaços
+    .replace(/\./g, "") // Remover pontos de milhar
+    .replace(",", ".") // Substituir vírgula decimal por ponto
+
+  return Number.parseFloat(valueStr) || 0
 }
 
+// Função para extrair período
 function extractPeriod(records: CommissionData[]): string {
   if (records.length === 0) return "Desconhecido"
 
   try {
     // Ordenar registros por data
-    const sortedRecords = [...records].sort((a, b) => new Date(a.emissao).getTime() - new Date(b.emissao).getTime())
+    const sortedRecords = [...records].sort((a, b) => {
+      const dateA = new Date(a.emissao)
+      const dateB = new Date(b.emissao)
+      return dateA.getTime() - dateB.getTime()
+    })
 
     // Pegar a primeira e última data
     const firstDate = new Date(sortedRecords[0].emissao)
@@ -297,6 +280,7 @@ function extractPeriod(records: CommissionData[]): string {
   }
 }
 
+// Função para calcular estatísticas
 function calculateSummary(records: CommissionData[]) {
   // Total de comissões
   const totalCommission = records.reduce((sum, record) => sum + record.valor_comissao_total, 0)

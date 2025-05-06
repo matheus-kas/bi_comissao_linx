@@ -92,6 +92,8 @@ export function DataTable({ data }: DataTableProps) {
         return new Intl.NumberFormat("pt-BR", {
           style: "currency",
           currency: "BRL",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         }).format(Number(amount))
       },
     },
@@ -103,9 +105,12 @@ export function DataTable({ data }: DataTableProps) {
         if (amount === null || amount === undefined || isNaN(Number(amount))) {
           return "—"
         }
+        // Garantir que o valor seja exibido com 2 casas decimais
         return new Intl.NumberFormat("pt-BR", {
           style: "currency",
           currency: "BRL",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         }).format(Number(amount))
       },
     },
