@@ -149,6 +149,13 @@ npm run dev
 - **Adicionar DebugDataViewer à interface** - Ferramenta para visualização de dados problemáticos
 - **Melhorar processamento de planilhas** - Suporte para diferentes formatos de planilhas
 
+<Actions>
+  <Action name="Implementar relatório Dedo Duro" description="Desenvolver a funcionalidade de detecção de inconsistências" />
+  <Action name="Melhorar visualizações de gráficos" description="Adicionar mais opções de visualização e interatividade" />
+  <Action name="Implementar autenticação" description="Adicionar sistema de login e controle de acesso" />
+  <Action name="Migrar para banco de dados" description="Substituir localStorage por uma solução de banco de dados" />
+  <Action name="Adicionar suporte a mais formatos" description="Permitir importação de CSV e outros formatos" />
+</Actions>
 
 ## 👥 Contribuição
 
