@@ -6,7 +6,8 @@ import { FileUploader } from "@/components/file-uploader"
 import { DataViewer } from "@/components/data-viewer"
 import { ComparisonTool } from "@/components/comparison-tool"
 import { DataAudit } from "@/components/data-audit"
-import { Header } from "@/components/header"
+// Remover a importação do Header
+// import { Header } from "@/components/header"
 import type { ProcessedFile } from "@/types/file-types"
 
 export function MainDashboard() {
@@ -24,7 +25,7 @@ export function MainDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      {/* Remover o Header daqui */}
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">

@@ -114,9 +114,59 @@ export function ComparisonTable({
       setTableData(filteredData)
     } else if (filterType === "significant-changes") {
       // Filtrar alterações significativas (ambos valores > 0 e variação percentual > 10%)
-      const filteredData = normalizedData.filter(
-        (item) => item[file1Alias] > 0 && item[file2Alias] > 0 && Math.abs(item.percentChange) > 10,
-      )
+      // E verificar se não são apenas diferenças de fatura/emissão
+      const filteredData = normalizedData.filter((item) => {
+        // Verificar se há variação percentual significativa
+        const hasSignificantChange = item[file1Alias] > 0 && item[file2Alias] > 0 && Math.abs(item.percentChange) > 10
+
+        if (!hasSignificantChange) return false
+
+        // Se os arquivos completos estiverem disponíveis, verificar se as diferenças
+        // não são apenas em fatura e emissão
+        if (filesAvailable && file1 && file2) {
+          const itemName = item.name
+
+          // Determinar se estamos comparando clientes ou produtos
+          const isClient = file1Alias === "arquivo1" && file2Alias === "arquivo2"
+
+          // Buscar registros correspondentes
+          let records1 = []
+          let records2 = []
+
+          if (isClient) {
+            records1 = file1.data.filter(
+              (record) => record.nome_clifor === itemName || record.cnpj_cliente === itemName,
+            )
+            records2 = file2.data.filter(
+              (record) => record.nome_clifor === itemName || record.cnpj_cliente === itemName,
+            )
+          } else {
+            records1 = file1.data.filter((record) => record.codigo_item === itemName)
+            records2 = file2.data.filter((record) => record.codigo_item === itemName)
+          }
+
+          // Se encontramos registros em ambos os arquivos
+          if (records1.length > 0 && records2.length > 0) {
+            // Pegar o primeiro registro de cada (simplificação)
+            const record1 = records1[0]
+            const record2 = records2[0]
+
+            // Verificar se os valores importantes são iguais
+            const sameCommission = Math.abs(record1.valor_comissao_total - record2.valor_comissao_total) < 0.01
+            const samePercent =
+              Math.abs(record1.percent_comissao_item_contrato - record2.percent_comissao_item_contrato) < 0.01
+            const sameReceived = Math.abs(record1.valor_recebido_total - record2.valor_recebido_total) < 0.01
+
+            // Se todos os valores importantes são iguais, ignorar diferenças apenas em fatura e emissão
+            if (sameCommission && samePercent && sameReceived) {
+              return false
+            }
+          }
+        }
+
+        return true
+      })
+
       setTableData(filteredData)
     }
   }
@@ -131,53 +181,117 @@ export function ComparisonTable({
     }
 
     try {
-      // Primeiro, vamos tentar encontrar pelo nome exato
+      // Encontrar o item na tabela de comparação
+      const tableItem = tableData.find((item) => item.name === itemName)
+
+      if (!tableItem) {
+        console.error("Item não encontrado na tabela:", itemName)
+        return
+      }
+
+      console.log("Item encontrado na tabela:", tableItem)
+
+      // Determinar se estamos comparando clientes ou produtos
+      const isClient = file1Alias === "arquivo1" && file2Alias === "arquivo2"
+
       let item1Data: CommissionData | null = null
       let item2Data: CommissionData | null = null
 
-      // Buscar no arquivo 1
-      const matchingItems1 = file1!.data.filter(
-        (item) => item.nome_clifor === itemName || item.codigo_item === itemName || item.cnpj_cliente === itemName,
-      )
+      if (isClient) {
+        // Buscar registros por cliente
+        const clientRecords1 = file1!.data.filter(
+          (item) => item.nome_clifor === itemName || item.cnpj_cliente === itemName,
+        )
 
-      // Buscar no arquivo 2
-      const matchingItems2 = file2!.data.filter(
-        (item) => item.nome_clifor === itemName || item.codigo_item === itemName || item.cnpj_cliente === itemName,
-      )
+        const clientRecords2 = file2!.data.filter(
+          (item) => item.nome_clifor === itemName || item.cnpj_cliente === itemName,
+        )
 
-      console.log("Itens encontrados:", {
-        arquivo1: matchingItems1.length,
-        arquivo2: matchingItems2.length,
-      })
+        // Se encontramos registros, use o que tem o valor mais próximo do valor na tabela
+        if (clientRecords1.length > 0) {
+          // Primeiro, tentar encontrar registros com valores exatamente iguais
+          const exactMatches = clientRecords1.filter(
+            (record) => Math.abs(record.valor_comissao_total - tableItem[file1Alias]) < 0.01,
+          )
 
-      // Se encontramos registros, use o primeiro
-      if (matchingItems1.length > 0) {
-        item1Data = matchingItems1[0]
-      }
+          if (exactMatches.length > 0) {
+            // Se encontramos correspondências exatas, usar a primeira
+            item1Data = exactMatches[0]
+          } else {
+            // Caso contrário, ordenar por proximidade do valor na tabela
+            clientRecords1.sort(
+              (a, b) =>
+                Math.abs(a.valor_comissao_total - tableItem[file1Alias]) -
+                Math.abs(b.valor_comissao_total - tableItem[file1Alias]),
+            )
+            item1Data = clientRecords1[0]
+          }
+        }
 
-      if (matchingItems2.length > 0) {
-        item2Data = matchingItems2[0]
-      }
+        if (clientRecords2.length > 0) {
+          // Primeiro, tentar encontrar registros com valores exatamente iguais
+          const exactMatches = clientRecords2.filter(
+            (record) => Math.abs(record.valor_comissao_total - tableItem[file2Alias]) < 0.01,
+          )
 
-      // Se não encontramos nada, criar registros parciais
-      if (!item1Data && !item2Data) {
-        console.log("Criando registros parciais para:", itemName)
+          if (exactMatches.length > 0) {
+            // Se encontramos correspondências exatas, usar a primeira
+            item2Data = exactMatches[0]
+          } else {
+            // Caso contrário, ordenar por proximidade do valor na tabela
+            clientRecords2.sort(
+              (a, b) =>
+                Math.abs(a.valor_comissao_total - tableItem[file2Alias]) -
+                Math.abs(b.valor_comissao_total - tableItem[file2Alias]),
+            )
+            item2Data = clientRecords2[0]
+          }
+        }
+      } else {
+        // Buscar registros por produto
+        const productRecords1 = file1!.data.filter((item) => item.codigo_item === itemName)
 
-        // Encontrar o item na tabela
-        const tableItem = tableData.find((item) => item.name === itemName)
+        const productRecords2 = file2!.data.filter((item) => item.codigo_item === itemName)
 
-        if (tableItem) {
-          item1Data = {
-            id: "partial-1",
-            nome_clifor: itemName,
-            valor_comissao_total: tableItem[file1Alias] || 0,
-          } as unknown as CommissionData
+        // Se encontramos registros, use o que tem o valor mais próximo do valor na tabela
+        if (productRecords1.length > 0) {
+          // Primeiro, tentar encontrar registros com valores exatamente iguais
+          const exactMatches = productRecords1.filter(
+            (record) => Math.abs(record.valor_comissao_total - tableItem[file1Alias]) < 0.01,
+          )
 
-          item2Data = {
-            id: "partial-2",
-            nome_clifor: itemName,
-            valor_comissao_total: tableItem[file2Alias] || 0,
-          } as unknown as CommissionData
+          if (exactMatches.length > 0) {
+            // Se encontramos correspondências exatas, usar a primeira
+            item1Data = exactMatches[0]
+          } else {
+            // Caso contrário, ordenar por proximidade do valor na tabela
+            productRecords1.sort(
+              (a, b) =>
+                Math.abs(a.valor_comissao_total - tableItem[file1Alias]) -
+                Math.abs(b.valor_comissao_total - tableItem[file1Alias]),
+            )
+            item1Data = productRecords1[0]
+          }
+        }
+
+        if (productRecords2.length > 0) {
+          // Primeiro, tentar encontrar registros com valores exatamente iguais
+          const exactMatches = productRecords2.filter(
+            (record) => Math.abs(record.valor_comissao_total - tableItem[file2Alias]) < 0.01,
+          )
+
+          if (exactMatches.length > 0) {
+            // Se encontramos correspondências exatas, usar a primeira
+            item2Data = exactMatches[0]
+          } else {
+            // Caso contrário, ordenar por proximidade do valor na tabela
+            productRecords2.sort(
+              (a, b) =>
+                Math.abs(a.valor_comissao_total - tableItem[file2Alias]) -
+                Math.abs(b.valor_comissao_total - tableItem[file2Alias]),
+            )
+            item2Data = productRecords2[0]
+          }
         }
       }
 

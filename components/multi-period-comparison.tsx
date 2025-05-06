@@ -655,7 +655,7 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                         layout="vertical"
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" tickFormatter={(value) => `${value}%`} />
+                        <XAxis type="number" tickFormatter={(value) => `${value}%`} domain={["auto", "auto"]} />
                         <YAxis dataKey="name" type="category" width={150} />
                         <Tooltip
                           formatter={(value) => [`${value}%`, "Variação"]}

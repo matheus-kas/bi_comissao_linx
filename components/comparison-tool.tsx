@@ -77,6 +77,8 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
         arquivo2: value2, // Adicionar aliases para uso seguro
         difference,
         percentChange,
+        // Adicionar informações para ajudar na comparação detalhada
+        isClient: true,
       })
     })
 
@@ -123,8 +125,12 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
         name: product,
         [file1.name]: value1,
         [file2.name]: value2,
+        arquivo1: value1, // Adicionar aliases para uso seguro
+        arquivo2: value2, // Adicionar aliases para uso seguro
         difference,
         percentChange,
+        // Adicionar informações para ajudar na comparação detalhada
+        isClient: false,
       })
     })
 

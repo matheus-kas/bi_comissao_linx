@@ -13,7 +13,7 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, icon, trend, trendLabel, className }: StatCardProps) {
-  const formattedTrend = trend ? `${trend > 0 ? "+" : ""}${trend.toFixed(1)}%` : null
+  const formattedTrend = trend !== undefined ? `${trend > 0 ? "+" : ""}${trend.toFixed(1)}%` : null
 
   return (
     <Card className={cn("overflow-hidden", className)}>
