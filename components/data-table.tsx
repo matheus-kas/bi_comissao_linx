@@ -183,14 +183,30 @@ export function DataTable({ data }: DataTableProps) {
         </div>
       </div>
       <div className="rounded-md border">
-        <Table>
+        <Table aria-label="Tabela de dados de comissão">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      onClick={() => header.column.toggleSorting()}
+                      aria-sort={
+                        header.column.getIsSorted()
+                          ? header.column.getIsSorted() === "desc"
+                            ? "descending"
+                            : "ascending"
+                          : "none"
+                      }
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getIsSorted() && (
+                        <span className="sr-only">
+                          {header.column.getIsSorted() === "desc" ? "Ordenado decrescente" : "Ordenado crescente"}
+                        </span>
+                      )}
                     </TableHead>
                   )
                 })}

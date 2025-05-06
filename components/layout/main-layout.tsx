@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Upload, BarChart2, GitCompare, FileSearch, Menu, FileText, Moon, Sun } from "lucide-react"
+import { Upload, BarChart2, GitCompare, FileSearch, Menu, FileText, Moon, Sun, CheckIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -69,6 +69,13 @@ export function MainLayout({ children }: MainLayoutProps) {
     },
   ]
 
+  const uploadProgress = [
+    { name: "Upload", href: "/upload", status: "complete" },
+    { name: "Dashboard", href: "/dashboard", status: pathname === "/dashboard" ? "current" : "pending" },
+    { name: "Comparação", href: "/comparison", status: pathname === "/comparison" ? "current" : "pending" },
+    { name: "Auditoria", href: "/audit", status: pathname === "/audit" ? "current" : "pending" },
+  ]
+
   const NavContent = () => (
     <>
       <div className="flex items-center gap-2 px-3 py-2 mb-8">
@@ -78,6 +85,36 @@ export function MainLayout({ children }: MainLayoutProps) {
           <p className="text-sm text-muted-foreground">IAL SOLUCOES - 2025</p>
         </div>
       </div>
+      {pathname === "/upload" && (
+        <div className="px-3 mb-4">
+          <div className="flex items-center">
+            {uploadProgress.map((step, index) => (
+              <div key={step.name} className="flex items-center">
+                <div
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                    step.status === "complete"
+                      ? "bg-primary text-primary-foreground"
+                      : step.status === "current"
+                        ? "border-2 border-primary text-primary"
+                        : "border border-muted-foreground/30 text-muted-foreground"
+                  }`}
+                >
+                  {step.status === "complete" ? <CheckIcon className="h-3 w-3" /> : index + 1}
+                </div>
+                {index < uploadProgress.length - 1 && (
+                  <div
+                    className={`h-0.5 w-10 ${
+                      uploadProgress[index + 1].status === "complete" || step.status === "complete"
+                        ? "bg-primary"
+                        : "bg-muted-foreground/30"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="space-y-1">
         {navigation.map((item) => (
           <Link

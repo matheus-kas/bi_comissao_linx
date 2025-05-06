@@ -145,13 +145,36 @@ export function FileUploader({ onFileProcessed }: FileUploaderProps) {
         {isProcessing && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Processando arquivo...</span>
+              <span>
+                {progress < 30
+                  ? "Lendo arquivo..."
+                  : progress < 60
+                    ? "Processando dados..."
+                    : progress < 90
+                      ? "Calculando métricas..."
+                      : "Finalizando..."}
+              </span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              {progress < 100 ? "Por favor, aguarde enquanto processamos seu arquivo..." : "Processamento concluído!"}
+            </p>
           </div>
         )}
       </CardContent>
+      <div className="text-sm text-muted-foreground mt-4 space-y-2">
+        <p className="font-medium">Dicas para o upload:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            Certifique-se de que o arquivo contém as colunas obrigatórias: nome_clifor, cnpj_cliente, codigo_item,
+            valor_comissao_total
+          </li>
+          <li>Para arquivos grandes, o processamento pode levar alguns minutos</li>
+          <li>Se encontrar erros, tente salvar o arquivo em um formato mais simples (Excel 97-2003)</li>
+          <li>Remova formatações complexas, macros e fórmulas avançadas antes do upload</li>
+        </ul>
+      </div>
       <CardFooter>
         <Button onClick={handleProcess} disabled={!file || isProcessing} className="w-full">
           {isProcessing ? (
