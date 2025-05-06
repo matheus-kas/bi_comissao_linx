@@ -2,50 +2,53 @@
 
 <div align="center">
   <img src="./public/logo.png" alt="Logo do Analisador de Comissões" width="200"/>
-  <br/>
-  <h3>Sistema para análise, comparação e visualização de dados de comissões recebidas pela franquia Linx</h3>
+  <h3>Plataforma inteligente para análise e visualização de comissões da franquia Linx</h3>
+  
+  [![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)](https://github.com/seu-usuario/bi-comissao-linx)
+  [![Versão](https://img.shields.io/badge/versão-1.1.24-blue)](https://github.com/seu-usuario/bi-comissao-linx/releases)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.4-blue)](https://www.typescriptlang.org/)
+  [![Next.js](https://img.shields.io/badge/Next.js-14.0.0-black)](https://nextjs.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.3.0-38B2AC)](https://tailwindcss.com/)
 </div>
 
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
-![Versão](https://img.shields.io/badge/versão-1.1.24-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0.4-blue)
-![Next.js](https://img.shields.io/badge/Next.js-14.0.0-black)
+## 📊 Visão Geral
 
-## 📋 Índice
+O **Analisador de Comissões Linx** é uma ferramenta moderna e eficiente desenvolvida para transformar dados brutos de comissões em insights acionáveis. Projetada especificamente para franquias Linx, a plataforma facilita o processamento, análise, comparação e visualização de relatórios de comissões através de uma interface intuitiva e poderosa.
 
-- [Visão Geral](#-visão-geral)
-- [Funcionalidades](#-funcionalidades)
-- [Tecnologias](#-tecnologias)
-- [Instalação](#-instalação)
-- [Como Usar](#-como-usar)
-- [Roadmap de Melhorias](#-roadmap-de-melhorias)
-- [Contribuição](#-contribuição)
-- [Licença](#-licença)
+### Por que usar o Analisador de Comissões?
 
-## 🔍 Visão Geral
+- **Aumente a visibilidade** sobre as fontes de receita
+- **Identifique inconsistências** nos relatórios de comissões
+- **Compare períodos** para análise de tendências e crescimento
+- **Economize tempo** na análise manual de planilhas Excel
+- **Tome decisões mais inteligentes** baseadas em dados reais
 
-O **Analisador de Comissões Linx** é uma ferramenta desenvolvida para facilitar a análise, comparação e visualização de dados de comissões recebidas pela franquia Linx. O sistema permite o upload de arquivos Excel contendo dados de comissões, processa esses dados e apresenta visualizações interativas para auxiliar na tomada de decisões.
+## ✨ Funcionalidades principais
 
-## ✨ Funcionalidades
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| 📤 **Upload Inteligente** | Processamento automático de arquivos Excel (.xls/.xlsx) |
+| 📊 **Dashboard Interativo** | Visualizações dinâmicas e métricas-chave em tempo real |
+| 📈 **Comparação Temporal** | Análise lado a lado de diferentes períodos |
+| 🔍 **Auditoria Detalhada** | Verificação aprofundada dos dados brutos |
+| 📋 **Exportação Flexível** | Exportação para múltiplos formatos (CSV, PDF) |
+| 💾 **Backup e Restauração** | Proteção e recuperação de dados importantes |
+| 🐛 **Ferramentas de Depuração** | Identificação e correção de problemas nos dados |
+| 🔐 **Relatório "Dedo Duro"** | Detecção automática de anomalias e inconsistências (em desenvolvimento) |
 
-- **Upload de Arquivos**: Suporte para arquivos Excel (.xls e .xlsx) com dados de comissões
-- **Dashboard Interativo**: Visualização de métricas-chave e gráficos
-- **Comparação de Períodos**: Análise comparativa entre diferentes períodos
-- **Auditoria de Dados**: Visualização detalhada dos dados brutos
-- **Exportação de Dados**: Exportação para CSV e PDF
-- **Backup e Restauração**: Funcionalidade para backup e restauração de dados
-- **Modo de Depuração**: Ferramentas para identificação e correção de problemas nos dados
+## 🚀 Stack Tecnológica
 
-## 🚀 Tecnologias
-
-- **Frontend**: Next.js, React, TypeScript
-- **UI**: Tailwind CSS, shadcn/ui
-- **Gráficos**: Recharts
-- **Processamento de Dados**: XLSX
-- **Armazenamento**: LocalStorage (versão atual), API REST (planejado)
+```
+Frontend: Next.js 14 + React + TypeScript
+Estilização: Tailwind CSS + shadcn/ui
+Visualização: Recharts
+Processamento: XLSX + PapaParse
+Análise de dados: Math.js + Lodash
+```
 
 ## 💻 Instalação
 
+```bash
 # Clone o repositório
 git clone https://github.com/seu-usuario/bi-comissao-linx.git
 
@@ -57,121 +60,93 @@ npm install
 
 # Inicie o servidor de desenvolvimento
 npm run dev
+```
 
-## 📖 Como Usar
+🌐 Acesse [http://localhost:3000](http://localhost:3000) no seu navegador
 
-1. **Upload de Arquivo**:
+## 📖 Guia de Uso
 
-1. Acesse a página de upload
-2. Arraste e solte um arquivo Excel ou clique para selecionar
-3. O sistema processará automaticamente o arquivo
+### 1️⃣ Upload e Processamento
 
+1. Acesse a página inicial e clique em "Upload"
+2. Arraste e solte seu arquivo Excel ou use o seletor de arquivos
+3. Aguarde o processamento automatizado
+4. Verifique a validação inicial de dados
 
+### 2️⃣ Exploração do Dashboard
 
-2. **Dashboard**:
+1. Navegue entre as diferentes visões do dashboard usando o menu lateral
+2. Visualize métricas-chave de desempenho no topo da página
+3. Interaja com os gráficos para obter informações detalhadas
+4. Use os filtros para refinar a visualização por período, cliente ou produto
 
-1. Visualize métricas-chave como total de comissões, clientes e produtos
-2. Explore gráficos de comissões por cliente e produto
+### 3️⃣ Análise Comparativa
 
+1. Vá para a seção "Comparação" no menu
+2. Selecione dois ou mais períodos para análise
+3. Examine as diferenças percentuais entre períodos
+4. Identifique tendências de crescimento ou queda
 
+### 4️⃣ Auditoria e Depuração
 
-3. **Comparação**:
+1. Acesse "Auditoria" para visualizar os dados brutos
+2. Use a ferramenta de busca para localizar registros específicos
+3. No modo "Depuração", identifique valores inconsistentes
+4. Exporte dados filtrados para análise externa
 
-1. Selecione dois arquivos para comparação
-2. Analise diferenças em comissões, clientes e produtos
-3. Visualize tendências com a comparação multi-período
-
-
-
-4. **Auditoria**:
-
-1. Acesse os dados brutos para verificação
-2. Exporte dados para CSV para análise externa
-
-
-
-5. **Depuração**:
-
-1. Utilize a página de depuração para identificar problemas nos dados
-2. Verifique valores inválidos e inconsistências
-
-
-
-
-
-## 📈 Roadmap de Melhorias
+## 📈 Roadmap
 
 ### Em Desenvolvimento
 
-#### Interface e Experiência do Usuário
+#### Interface e UX (Q2 2025)
+- [ ] Tema personalizado para a marca
+- [ ] Dashboard consolidado com visão 360°
+- [ ] Comparação multi-período aprimorada
+- [ ] Interface de depuração intuitiva
 
-- **Criar tema personalizado** - Implementação de tema específico para a marca
-- **Melhorar a comparação multi-período** - Aprimorar visualizações e interatividade
-- **Adicionar dashboard consolidado** - Visão unificada de todos os dados
-- **Melhorar o modo de depuração** - Interface mais intuitiva para identificação de problemas
+#### Funcionalidades Core (Q3 2025)
+- [ ] Exportação para múltiplos formatos
+- [ ] Validação robusta de dados
+- [ ] Análise preditiva automatizada
+- [ ] Sistema de detecção de anomalias
 
-
-#### Funcionalidades
-
-- **Implementar exportação de dados** - Suporte para mais formatos de exportação
-- **Adicionar validação de dados** - Verificação mais robusta durante o upload
-- **Implementar análise automática** - Detecção automática de padrões e anomalias
-- **Adicionar detecção de anomalias** - Identificação de valores atípicos
-
-
-#### Relatório "Dedo Duro"
-
-- **Detalhar implementação do Dedo Duro** - Relatório para identificação de inconsistências
-- **Definir algoritmo de comparação** - Metodologia para detecção de discrepâncias
-- **Criar métricas de impacto** - Quantificação do impacto financeiro das anomalias
-- **Iniciar implementação do Dedo Duro** - Desenvolvimento da funcionalidade
-
+#### Relatório "Dedo Duro" (Q4 2025)
+- [ ] Algoritmos de comparação inteligente
+- [ ] Métricas de impacto financeiro
+- [ ] Alertas automáticos de inconsistências
+- [ ] Visualização de discrepâncias históricas
 
 #### Infraestrutura e Qualidade
+- [ ] Análise contínua com SonarCloud
+- [ ] Cobertura de testes unitários >80%
+- [ ] CI/CD via GitHub Actions
+- [ ] Otimização para arquivos de grande porte
 
-- **Configurar SonarCloud** - Análise contínua de qualidade de código
-- **Adicionar testes unitários** - Cobertura de testes para funções críticas
-- **Configurar mocks para processamento de arquivos** - Simulação de dados para testes
-- **Implementar testes para o relatório Dedo Duro** - Validação da funcionalidade
+## 👥 Como Contribuir
 
+Valorizamos sua contribuição para tornar o Analisador de Comissões ainda melhor!
 
-#### Performance e Monitoramento
+1. 🔀 Faça um fork do projeto
+2. 🌿 Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+3. 💻 Desenvolva sua funcionalidade seguindo as boas práticas
+4. ✅ Adicione testes quando possível
+5. 📝 Faça commit das alterações (`git commit -m 'feat: adiciona nova funcionalidade'`)
+6. 🚀 Faça push para sua branch (`git push origin feature/nova-funcionalidade`)
+7. 🔄 Abra um Pull Request detalhando suas alterações
 
-- **Otimizar performance** - Melhorias no processamento de arquivos grandes
-- **Implementar monitoramento** - Rastreamento de erros e performance
-- **Melhorar processamento de importação** - Otimização do parser de arquivos Excel
-
-
-### Correções Recentes
-
-- **Corrigir erros de TypeScript** - Resolução de problemas de tipagem
-- **Melhorar validação de dados** - Tratamento de valores NaN e inválidos
-- **Adicionar DebugDataViewer à interface** - Ferramenta para visualização de dados problemáticos
-- **Melhorar processamento de planilhas** - Suporte para diferentes formatos de planilhas
-
-<Actions>
-  <Action name="Implementar relatório Dedo Duro" description="Desenvolver a funcionalidade de detecção de inconsistências" />
-  <Action name="Melhorar visualizações de gráficos" description="Adicionar mais opções de visualização e interatividade" />
-  <Action name="Implementar autenticação" description="Adicionar sistema de login e controle de acesso" />
-  <Action name="Migrar para banco de dados" description="Substituir localStorage por uma solução de banco de dados" />
-  <Action name="Adicionar suporte a mais formatos" description="Permitir importação de CSV e outros formatos" />
-</Actions>
-
-## 👥 Contribuição
-
-Contribuições são bem-vindas! Para contribuir:
-
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Faça commit das suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Faça push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
+Consulte nossa [documentação de contribuição](CONTRIBUTING.md) para mais detalhes.
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+Este projeto está licenciado sob a [Licença MIT](LICENSE).
 
 ---
 
-Desenvolvido por [IAL SOLUCOES](mailto:matheus@ialinformatica.com.br) - 2025
+<div align="center">
+  <p>
+    Desenvolvido com ❤️ por <a href="https://ialinformatica.com.br">IAL SOLUÇÕES</a>
+  </p>
+  <p>
+    <a href="mailto:matheus@ialinformatica.com.br">matheus@ialinformatica.com.br</a> | © 2025
+  </p>
+</div>
