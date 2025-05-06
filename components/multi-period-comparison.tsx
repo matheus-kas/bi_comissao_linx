@@ -165,7 +165,10 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
     const allClients = new Set<string>()
     selectedFiles.forEach((file) => {
       file.data.forEach((item) => {
-        allClients.add(item.nome_clifor)
+        // Garantir que não haja nomes vazios
+        if (item.nome_clifor && item.nome_clifor.trim() !== "") {
+          allClients.add(item.nome_clifor)
+        }
       })
     })
 
@@ -213,7 +216,10 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
     const allProducts = new Set<string>()
     selectedFiles.forEach((file) => {
       file.data.forEach((item) => {
-        allProducts.add(item.codigo_item)
+        // Garantir que não haja códigos vazios
+        if (item.codigo_item && item.codigo_item.trim() !== "") {
+          allProducts.add(item.codigo_item)
+        }
       })
     })
 
@@ -316,7 +322,10 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
     const clients = new Set<string>()
     selectedFiles.forEach((file) => {
       file.data.forEach((item) => {
-        clients.add(item.nome_clifor)
+        // Garantir que não haja nomes vazios
+        if (item.nome_clifor && item.nome_clifor.trim() !== "") {
+          clients.add(item.nome_clifor)
+        }
       })
     })
     return Array.from(clients).sort()
@@ -327,7 +336,10 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
     const products = new Set<string>()
     selectedFiles.forEach((file) => {
       file.data.forEach((item) => {
-        products.add(item.codigo_item)
+        // Garantir que não haja códigos vazios
+        if (item.codigo_item && item.codigo_item.trim() !== "") {
+          products.add(item.codigo_item)
+        }
       })
     })
     return Array.from(products).sort()
@@ -392,6 +404,9 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
     if (value < 0) return <ArrowDownIcon className="h-4 w-4 text-red-500" />
     return <MinusIcon className="h-4 w-4 text-gray-500" />
   }
+
+  // Constante para o valor "todos"
+  const ALL_VALUE = "todos_os_itens"
 
   return (
     <div className="space-y-4">
@@ -667,14 +682,14 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                 </CardHeader>
                 <CardContent>
                   <Select
-                    value={selectedClientFilter || "all"}
-                    onValueChange={(value) => setSelectedClientFilter(value === "all" ? null : value)}
+                    value={selectedClientFilter || ALL_VALUE}
+                    onValueChange={(value) => setSelectedClientFilter(value === ALL_VALUE ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos os clientes</SelectItem>
+                      <SelectItem value={ALL_VALUE}>Todos os clientes</SelectItem>
                       {uniqueClients.map((client) => (
                         <SelectItem key={client} value={client}>
                           {client}
@@ -691,14 +706,14 @@ export function MultiPeriodComparison({ files }: MultiPeriodComparisonProps) {
                 </CardHeader>
                 <CardContent>
                   <Select
-                    value={selectedProductFilter || "all"}
-                    onValueChange={(value) => setSelectedProductFilter(value === "all" ? null : value)}
+                    value={selectedProductFilter || ALL_VALUE}
+                    onValueChange={(value) => setSelectedProductFilter(value === ALL_VALUE ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um produto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos os produtos</SelectItem>
+                      <SelectItem value={ALL_VALUE}>Todos os produtos</SelectItem>
                       {uniqueProducts.map((product) => (
                         <SelectItem key={product} value={product}>
                           {product}
