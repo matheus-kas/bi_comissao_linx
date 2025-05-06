@@ -8,12 +8,16 @@ import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/data-table"
 import { Download, FileSearch, Link } from "lucide-react"
 import type { ProcessedFile } from "@/types/file-types"
+import { useSearchParams } from "next/navigation"
 
 export default function AuditPage() {
+  const searchParams = useSearchParams()
   const [files, setFiles] = useState<ProcessedFile[]>([])
   const [selectedFileId, setSelectedFileId] = useState<string>("")
+  const [activeTab, setActiveTab] = useState<string>("data")
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Simulação de carregamento de dados
+  // Carregamento inicial de dados - executado apenas uma vez
   useEffect(() => {
     // Em um cenário real, esses dados viriam do contexto ou de uma API
     const mockFiles = localStorage.getItem("processedFiles")
@@ -21,14 +25,46 @@ export default function AuditPage() {
       try {
         const parsedFiles = JSON.parse(mockFiles) as ProcessedFile[]
         setFiles(parsedFiles)
-        if (parsedFiles.length > 0 && !selectedFileId) {
+
+        // Verificar se há um arquivo especificado na URL
+        const fileId = searchParams.get("file")
+
+        if (fileId) {
+          setSelectedFileId(fileId)
+        } else if (parsedFiles.length > 0) {
           setSelectedFileId(parsedFiles[0].id)
         }
+
+        // Verificar se há uma aba especificada na URL
+        const tab = searchParams.get("tab")
+        if (tab) {
+          setActiveTab(tab)
+        }
+
+        setIsInitialized(true)
       } catch (e) {
         console.error("Erro ao carregar arquivos:", e)
+        setIsInitialized(true)
       }
+    } else {
+      setIsInitialized(true)
     }
-  }, [selectedFileId])
+  }, []) // Removida a dependência searchParams para evitar loops
+
+  // Atualiza o estado quando os parâmetros da URL mudam, mas apenas após a inicialização
+  useEffect(() => {
+    if (!isInitialized) return
+
+    const fileId = searchParams.get("file")
+    if (fileId && fileId !== selectedFileId) {
+      setSelectedFileId(fileId)
+    }
+
+    const tab = searchParams.get("tab")
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab)
+    }
+  }, [searchParams, isInitialized, selectedFileId, activeTab])
 
   const selectedFile = files.find((f) => f.id === selectedFileId)
 

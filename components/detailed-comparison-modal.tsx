@@ -82,6 +82,12 @@ export function DetailedComparisonModal({
           } else if (value1 !== undefined && value2 === undefined) {
             // Se um valor existe e o outro não
             isDifferent = true
+          } else if (field === "codigo_item" || field === "vencimento_real") {
+            // Para campos específicos que esperamos que sejam diferentes entre períodos
+            isDifferent = value1 !== value2
+          } else if (field === "fatura" || field === "emissao") {
+            // Ignorar diferenças em fatura e emissão para fins de comparação significativa
+            isDifferent = false
           } else {
             // Para outros tipos, comparação direta
             isDifferent = value1 !== value2
@@ -112,6 +118,10 @@ export function DetailedComparisonModal({
       "valor_comissao_total",
       "percent_comissao_item_contrato",
       "valor_recebido_total",
+      "emissao",
+      "vencimento_real",
+      "taxa_imposto",
+      "valor_imposto",
     ]
 
     // Obter todos os campos que têm valores
