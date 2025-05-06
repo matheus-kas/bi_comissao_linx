@@ -1,6 +1,6 @@
-import type { LucideProps } from "lucide-react"
+import type { SVGProps } from "react"
 
-export const FileText = (props: LucideProps) => (
+export const FileText = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     xmlns="http://www.w3.org/2000/svg"

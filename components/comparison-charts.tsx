@@ -46,8 +46,8 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
         const aValue2 = Number(a[file2.name]) || 0
         const bValue1 = Number(b[file1.name]) || 0
         const bValue2 = Number(b[file2.name]) || 0
-        
-        return (bValue1 + bValue2) - (aValue1 + aValue2)
+
+        return bValue1 + bValue2 - (aValue1 + aValue2)
       })
       .slice(0, 5)
   }, [file1, file2])
@@ -87,8 +87,8 @@ export function ComparisonCharts({ file1, file2 }: ComparisonChartsProps) {
         const aValue2 = Number(a[file2.name]) || 0
         const bValue1 = Number(b[file1.name]) || 0
         const bValue2 = Number(b[file2.name]) || 0
-        
-        return (bValue1 + bValue2) - (aValue1 + aValue2)
+
+        return bValue1 + bValue2 - (aValue1 + aValue2)
       })
       .slice(0, 5)
   }, [file1, file2])

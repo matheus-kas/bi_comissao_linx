@@ -1,55 +1,17 @@
 import { v4 as uuidv4 } from "uuid"
-import fs from "fs"
-import path from "path"
 import type { ProcessedFile } from "@/types/file-types"
+import path from "path"
+import fs from "fs"
 
 // Chave para armazenamento no localStorage
 const STORAGE_KEY = "processedFiles"
 
-// Diretório para armazenamento de arquivos
+// Diretório onde os arquivos serão armazenados (para API routes)
 const UPLOAD_DIR = path.join(process.cwd(), "uploads")
 
-// Função para obter o caminho do arquivo
-export function getFilePath(filename: string): string {
-  return path.join(UPLOAD_DIR, filename)
-}
-
-// Função para listar arquivos no diretório de uploads
-export function listFiles(): string[] {
-  try {
-    // Criar diretório se não existir
-    if (!fs.existsSync(UPLOAD_DIR)) {
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true })
-      return []
-    }
-
-    return fs.readdirSync(UPLOAD_DIR)
-  } catch (error) {
-    console.error("Erro ao listar arquivos:", error)
-    return []
-  }
-}
-
-// Função para salvar um arquivo no servidor
-export async function saveFile(buffer: Buffer, originalName: string): Promise<string> {
-  try {
-    // Criar diretório se não existir
-    if (!fs.existsSync(UPLOAD_DIR)) {
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true })
-    }
-
-    // Gerar nome único para o arquivo
-    const filename = `${Date.now()}-${uuidv4()}${path.extname(originalName)}`
-    const filePath = getFilePath(filename)
-
-    // Salvar o arquivo
-    fs.writeFileSync(filePath, buffer)
-
-    return filename
-  } catch (error) {
-    console.error("Erro ao salvar arquivo:", error)
-    throw new Error("Não foi possível salvar o arquivo")
-  }
+// Garantir que o diretório existe
+if (typeof window === "undefined" && !fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 }
 
 // Função para salvar um arquivo processado
@@ -170,4 +132,29 @@ export function importData(jsonData: string): boolean {
     console.error("Erro ao importar dados:", error)
     return false
   }
+}
+
+// Funções para API routes
+export function saveFile(buffer: Buffer, originalName: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      const timestamp = Date.now()
+      const filename = `${timestamp}-${originalName.replace(/\s+/g, "_")}`
+      const filePath = path.join(UPLOAD_DIR, filename)
+
+      fs.writeFileSync(filePath, buffer)
+      resolve(filename)
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+export function getFilePath(filename: string): string {
+  return path.join(UPLOAD_DIR, filename)
+}
+
+export function listFiles(): string[] {
+  if (typeof window !== "undefined" || !fs.existsSync(UPLOAD_DIR)) return []
+  return fs.readdirSync(UPLOAD_DIR)
 }

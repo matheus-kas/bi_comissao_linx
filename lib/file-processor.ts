@@ -2,122 +2,89 @@ import * as XLSX from "xlsx"
 import { v4 as uuidv4 } from "uuid"
 import type { ProcessedFile, CommissionData } from "@/types/file-types"
 
-// Vamos modificar a função processFile para garantir que os valores sejam lidos corretamente
-// Substitua a função processFile existente por esta versão melhorada:
-
+// Função para processar arquivo Excel a partir de um File (para componentes)
 export async function processFile(file: File): Promise<ProcessedFile> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
+  try {
+    // Ler o arquivo como ArrayBuffer
+    const buffer = await file.arrayBuffer()
 
-    reader.onload = async (e) => {
-      try {
-        // Obter o ArrayBuffer do arquivo
-        const arrayBuffer = e.target?.result as ArrayBuffer
+    // Ler o arquivo Excel com configurações específicas para preservar os valores originais
+    const workbook = XLSX.read(buffer, {
+      type: "array",
+      cellDates: true,
+      cellNF: false,
+      cellText: false,
+      raw: true, // Importante: ler valores brutos
+    })
 
-        // Ler o arquivo Excel com configurações específicas para preservar os valores originais
-        const data = new Uint8Array(arrayBuffer)
-        const workbook = XLSX.read(data, {
-          type: "array",
-          cellDates: true,
-          cellNF: false,
-          cellText: false,
-          raw: true, // Importante: ler valores brutos
-        })
+    // Obter a primeira planilha
+    const firstSheetName = workbook.SheetNames[0]
+    const worksheet = workbook.Sheets[firstSheetName]
 
-        // Obter a primeira planilha
-        const firstSheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[firstSheetName]
+    // Converter para JSON com opções para preservar valores originais
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+      raw: true, // Ler valores brutos
+      defval: "",
+      header: "A", // Usar letras como cabeçalhos para garantir que lemos os dados brutos
+    })
 
-        // Converter para JSON com opções para preservar valores originais
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-          raw: true, // Ler valores brutos
-          defval: "",
-          header: "A", // Usar letras como cabeçalhos para garantir que lemos os dados brutos
-        })
+    console.log("Dados brutos (primeiros 3 registros):", jsonData.slice(0, 3))
 
-        console.log("Dados brutos (primeiros 3 registros):", jsonData.slice(0, 3))
+    // Mapear cabeçalhos para índices de coluna
+    const headerRow = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] as string[]
+    const headerMap = new Map<string, string>()
 
-        // Mapear cabeçalhos para índices de coluna
-        const headerRow = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] as string[]
-        const headerMap = new Map<string, string>()
+    headerRow.forEach((header, index) => {
+      const colLetter = XLSX.utils.encode_col(index)
+      headerMap.set(header.toLowerCase().trim(), colLetter)
+    })
 
-        headerRow.forEach((header, index) => {
-          const colLetter = XLSX.utils.encode_col(index)
-          headerMap.set(header.toLowerCase().trim(), colLetter)
-        })
+    console.log("Mapeamento de cabeçalhos:", Object.fromEntries(headerMap))
 
-        console.log("Mapeamento de cabeçalhos:", Object.fromEntries(headerMap))
+    // Processar os dados usando o mapeamento de cabeçalhos
+    const processedData = processRecordsWithHeaders(jsonData, headerMap, headerRow)
 
-        // Processar os dados usando o mapeamento de cabeçalhos
-        const processedData = processRecordsWithHeaders(jsonData, headerMap, headerRow)
-
-        // Verificar se temos dados
-        if (processedData.length === 0) {
-          throw new Error("Não foi possível extrair dados do arquivo. Verifique se o formato está correto.")
-        }
-
-        // Extrair período
-        const period = extractPeriod(processedData)
-
-        // Calcular estatísticas
-        const summary = calculateSummary(processedData)
-
-        // Criar objeto de arquivo processado
-        const processedFile: ProcessedFile = {
-          id: uuidv4(),
-          name: file.name,
-          originalName: file.name,
-          size: file.size,
-          uploadDate: new Date().toISOString(),
-          period,
-          data: processedData,
-          summary,
-        }
-
-        // Imprimir alguns dados para depuração
-        console.log("Resumo:", summary)
-        console.log("Amostra de dados processados (primeiros 3 registros):", processedData.slice(0, 3))
-
-        resolve(processedFile)
-      } catch (error) {
-        console.error("Erro ao processar arquivo:", error)
-        reject(new Error(`Falha ao processar o arquivo: ${error instanceof Error ? error.message : String(error)}`))
-      }
+    // Verificar se temos dados
+    if (processedData.length === 0) {
+      throw new Error("Não foi possível extrair dados do arquivo. Verifique se o formato está correto.")
     }
 
-    reader.onerror = () => {
-      reject(new Error("Erro ao ler o arquivo"))
+    // Extrair período
+    const period = extractPeriod(processedData)
+
+    // Calcular estatísticas
+    const summary = calculateSummary(processedData)
+
+    // Criar objeto de arquivo processado
+    const processedFile: ProcessedFile = {
+      id: uuidv4(),
+      name: file.name,
+      originalName: file.name,
+      size: file.size,
+      uploadDate: new Date().toISOString(),
+      period,
+      data: processedData,
+      summary,
     }
 
-    reader.readAsArrayBuffer(file)
-  })
-}
-
-// Adicione uma função para verificar e corrigir valores numéricos durante o processamento
-function processNumericValue(value: any): number {
-  // Se o valor for undefined, null ou string vazia, retorne 0
-  if (value === undefined || value === null || value === "") return 0
-
-  // Se já for um número, retorne diretamente - mesmo que seja NaN
-  if (typeof value === "number") return value
-
-  // Se for string, tente converter para número
-  if (typeof value === "string") {
-    // Remover símbolos de moeda e converter vírgula para ponto
-    const valueStr = value
-      .replace(/[R$\s]/g, "") // Remover R$ e espaços
-      .replace(/\./g, "") // Remover pontos de milhar
-      .replace(",", ".") // Substituir vírgula decimal por ponto
-
-    const parsedValue = Number.parseFloat(valueStr)
-    return parsedValue // Retorne o valor mesmo que seja NaN
+    return processedFile
+  } catch (error) {
+    console.error("Erro ao processar arquivo Excel:", error)
+    throw new Error(`Falha ao processar o arquivo Excel: ${error instanceof Error ? error.message : String(error)}`)
   }
-
-  // Para outros tipos, tente converter diretamente
-  return Number(value) // Retorne o valor mesmo que seja NaN
 }
 
-// Adicione esta nova função para processar registros usando o mapeamento de cabeçalhos
+export async function processExcelFile(buffer: Buffer, fileName: string): Promise<ProcessedFile> {
+  // Criar um objeto File a partir do Buffer
+  const file = new File([buffer], fileName, {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  })
+
+  // Usar a função processFile existente
+  return processFile(file)
+}
+
+// Função para processar registros usando o mapeamento de cabeçalhos
 function processRecordsWithHeaders(
   jsonData: any[],
   headerMap: Map<string, string>,
@@ -134,26 +101,26 @@ function processRecordsWithHeaders(
   }
 
   // Função para processar valor numérico com segurança
-  // const processNumericValue = (value: any): number => {
-  //   if (value === undefined || value === null || value === "") return 0
+  const processNumericValue = (value: any): number => {
+    if (value === undefined || value === null || value === "") return 0
 
-  //   // Se já for um número, retornar diretamente
-  //   if (typeof value === "number") return value
+    // Se já for um número, retornar diretamente
+    if (typeof value === "number") return value
 
-  //   // Se for string, converter para número com cuidado
-  //   if (typeof value === "string") {
-  //     // Remover símbolos de moeda e converter vírgula para ponto
-  //     const valueStr = value
-  //       .replace(/[R$\s]/g, "") // Remover R$ e espaços
-  //       .replace(/\./g, "") // Remover pontos de milhar
-  //       .replace(",", ".") // Substituir vírgula decimal por ponto
+    // Se for string, converter para número com cuidado
+    if (typeof value === "string") {
+      // Remover símbolos de moeda e converter vírgula para ponto
+      const valueStr = value
+        .replace(/[R$\s]/g, "") // Remover R$ e espaços
+        .replace(/\./g, "") // Remover pontos de milhar
+        .replace(",", ".") // Substituir vírgula decimal por ponto
 
-  //     return Number.parseFloat(valueStr) || 0
-  //   }
+      return Number.parseFloat(valueStr) || 0
+    }
 
-  //   // Tentar converter outros tipos
-  //   return Number(value) || 0
-  // }
+    // Tentar converter outros tipos
+    return Number(value) || 0
+  }
 
   return jsonData.slice(1).map((row, index) => {
     // Pular a primeira linha (cabeçalhos)
@@ -258,22 +225,6 @@ function processRecordsWithHeaders(
       }
     }
   })
-}
-
-// Função para extrair valor numérico
-function parseNumericValue(value: any): number {
-  if (value === undefined || value === null || value === "") return 0
-
-  // Se já for um número
-  if (typeof value === "number") return value
-
-  // Se for string, converter para número
-  const valueStr = String(value)
-    .replace(/[R$\s%]/g, "") // Remover R$, % e espaços
-    .replace(/\./g, "") // Remover pontos de milhar
-    .replace(",", ".") // Substituir vírgula decimal por ponto
-
-  return Number.parseFloat(valueStr) || 0
 }
 
 // Função para extrair período

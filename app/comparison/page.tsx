@@ -14,15 +14,14 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type { ProcessedFile } from "@/types/file-types"
 
-// Definir interface para os itens de comparação
+// Definir interfaces para os dados de comparação
 interface ComparisonItem {
   name: string
+  [key: string]: any // Para campos dinâmicos com nomes de arquivo
   difference: number
   percentChange: number
-  [key: string]: string | number // Para valores dinâmicos com nomes de arquivo
 }
 
-// Definir interface para os dados de comparação
 interface ComparisonData {
   clientData: ComparisonItem[]
   productData: ComparisonItem[]
@@ -44,23 +43,34 @@ export default function ComparisonPage() {
   const [file2Id, setFile2Id] = useState<string>("")
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
   const [comparisonMode, setComparisonMode] = useState<"dual" | "multi">("dual")
+  const [isLoading, setIsLoading] = useState(true)
 
   // Simulação de carregamento de dados
   useEffect(() => {
     // Em um cenário real, esses dados viriam do contexto ou de uma API
-    const mockFiles = localStorage.getItem("processedFiles")
-    if (mockFiles) {
+    const loadFiles = () => {
       try {
-        const parsedFiles = JSON.parse(mockFiles) as ProcessedFile[]
-        setFiles(parsedFiles)
-        if (parsedFiles.length > 1) {
-          if (!file1Id) setFile1Id(parsedFiles[0].id)
-          if (!file2Id) setFile2Id(parsedFiles[1].id)
+        setIsLoading(true)
+        const mockFiles = localStorage.getItem("processedFiles")
+        if (mockFiles) {
+          const parsedFiles = JSON.parse(mockFiles) as ProcessedFile[]
+          console.log("Arquivos carregados:", parsedFiles.length)
+          setFiles(parsedFiles)
+
+          if (parsedFiles.length > 1) {
+            // Só definir os IDs se ainda não tiverem sido definidos
+            if (!file1Id) setFile1Id(parsedFiles[0].id)
+            if (!file2Id) setFile2Id(parsedFiles[1].id)
+          }
         }
       } catch (e) {
         console.error("Erro ao carregar arquivos:", e)
+      } finally {
+        setIsLoading(false)
       }
     }
+
+    loadFiles()
   }, [file1Id, file2Id])
 
   // Gerar dados de comparação quando os arquivos selecionados mudarem
@@ -70,7 +80,24 @@ export default function ComparisonPage() {
     const file1 = files.find((f) => f.id === file1Id)
     const file2 = files.find((f) => f.id === file2Id)
 
-    if (!file1 || !file2) return
+    if (!file1 || !file2) {
+      console.log("Arquivos não encontrados para comparação")
+      return
+    }
+
+    // Verificar se os arquivos têm dados
+    if (!file1.data || !file2.data) {
+      console.error("Dados ausentes nos arquivos", {
+        file1HasData: !!file1.data,
+        file2HasData: !!file2.data,
+      })
+      return
+    }
+
+    console.log("Gerando dados de comparação", {
+      file1: { id: file1.id, name: file1.name, dataCount: file1.data.length },
+      file2: { id: file2.id, name: file2.name, dataCount: file2.data.length },
+    })
 
     // Simulação de comparação (em um cenário real, isso seria feito pelo processador de arquivos)
     const clientComparisonData: ComparisonItem[] = []
@@ -173,6 +200,10 @@ export default function ComparisonPage() {
     }).format(value)
   }
 
+  // Obtenha referências diretas aos arquivos selecionados
+  const file1 = files.find((f) => f.id === file1Id)
+  const file2 = files.find((f) => f.id === file2Id)
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -198,7 +229,13 @@ export default function ComparisonPage() {
           </div>
         </div>
 
-        {files.length < 2 ? (
+        {isLoading ? (
+          <Card>
+            <CardContent className="flex items-center justify-center py-10">
+              <p>Carregando dados...</p>
+            </CardContent>
+          </Card>
+        ) : files.length < 2 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10">
               <div className="rounded-full bg-primary/10 p-3 mb-4">
@@ -259,7 +296,7 @@ export default function ComparisonPage() {
               </CardContent>
             </Card>
 
-            {comparisonData && (
+            {comparisonData && file1 && file2 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard
@@ -330,16 +367,30 @@ export default function ComparisonPage() {
                         <CardDescription>Análise detalhada das diferenças entre os arquivos</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <ComparisonTable
-                          data={comparisonData.clientData}
-                          file1Name={files.find((f) => f.id === file1Id)?.name || "Arquivo 1"}
-                          file2Name={files.find((f) => f.id === file2Id)?.name || "Arquivo 2"}
-                        />
+                        {file1 && file2 && (
+                          <ComparisonTable
+                            data={comparisonData.clientData}
+                            file1Name={file1.name}
+                            file2Name={file2.name}
+                            file1={file1}
+                            file2={file2}
+                          />
+                        )}
                       </CardContent>
                     </Card>
                   </TabsContent>
                 </Tabs>
               </>
+            ) : (
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <p className="text-muted-foreground">
+                    {file1Id && file2Id
+                      ? "Carregando dados de comparação..."
+                      : "Selecione dois arquivos para visualizar a comparação"}
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </>
         ) : (
