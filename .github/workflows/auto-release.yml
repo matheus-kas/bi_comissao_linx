@@ -1,109 +1,57 @@
-name: Automatic Release on Commit
+name: Auto Release
 
 on:
   push:
     branches:
       - main
     paths-ignore:
-      - 'README.md'
-      - 'docs/**'
+      - '**.md'
       - '.github/**'
+      - '!.github/workflows/auto-release.yml'
 
 jobs:
-  release:
-    name: Create Automatic Release
+  auto-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
-
+      
       - name: Install dependencies
         run: npm ci
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
-      - name: Get current version
-        id: current_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Bump patch version
-        id: bump_version
-        run: |
-          # Incrementar a versão patch
-          npm version patch --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "Versão atualizada de ${{ steps.current_version.outputs.version }} para $NEW_VERSION"
-
-      - name: Build project
-        run: npm run build
-
-      - name: Commit version update
-        run: |
-          git add package.json package-lock.json
-          git commit -m "chore: bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]"
-          git tag -a "v${{ steps.bump_version.outputs.new_version }}" -m "Release v${{ steps.bump_version.outputs.new_version }}"
-          git push
-          git push --tags
-
-      - name: Generate changelog
-        id: changelog
-        uses: metcalfc/changelog-generator@v4.1.0
-        with:
-          myToken: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create ZIP archive
-        run: |
-          zip -r analisador-comissoes-linx-v${{ steps.bump_version.outputs.new_version }}.zip .next public package.json README.md LICENSE
-
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Get version from package.json
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+      
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.bump_version.outputs.new_version }}
-          name: Analisador de Comissões Linx v${{ steps.bump_version.outputs.new_version }}
-          body: |
-            ## Analisador de Comissões Linx v${{ steps.bump_version.outputs.new_version }}
-            
-            ### 📋 Changelog
-            
-            ${{ steps.changelog.outputs.changelog }}
-            
-            ### 📦 Instalação
-            
-            ```bash
-            # Clone o repositório
-            git clone https://github.com/${{ github.repository }}.git
-            
-            # Entre no diretório
-            cd $(basename ${{ github.repository }})
-            
-            # Instale as dependências
-            npm install
-            
-            # Inicie o aplicativo
-            npm run dev
-            ```
-            
-            ### 📝 Notas da Versão
-            
-            Esta versão foi gerada automaticamente pelo GitHub Actions.
-            
+          tag_name: v${{ steps.package-version.outputs.current-version }}
+          release_name: Release v${{ steps.package-version.outputs.current-version }}
           draft: false
           prerelease: false
-          files: |
-            analisador-comissoes-linx-v${{ steps.bump_version.outputs.new_version }}.zip
+          body: |
+            ## Alterações nesta versão
+            
+            Versão automática gerada a partir do branch main.
+            
+            ### Commits incluídos
+            ${{ github.event.head_commit.message }}
