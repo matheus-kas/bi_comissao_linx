@@ -15,7 +15,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { TrendingUp, TrendingDown, Minus, Search } from "lucide-react"
+import { TrendingUp, TrendingDown, Minus, Search, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DetailedComparisonModal } from "@/components/detailed-comparison-modal"
 import type { ProcessedFile, CommissionData } from "@/types/file-types"
 
@@ -41,6 +42,31 @@ export function ComparisonTable({
   const [sorting, setSorting] = useState<SortingState>([{ id: "difference", desc: true }])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = useState("")
+
+  // Verificar se os arquivos estão disponíveis
+  const [filesAvailable, setFilesAvailable] = useState(false)
+
+  useEffect(() => {
+    // Verificar se os arquivos e seus dados estão disponíveis
+    const available = !!(file1 && file2 && file1.data && file2.data && file1.data.length > 0 && file2.data.length > 0)
+    setFilesAvailable(available)
+
+    if (available) {
+      console.log("Arquivos disponíveis para comparação", {
+        file1Name: file1.name,
+        file2Name: file2.name,
+        file1DataLength: file1.data.length,
+        file2DataLength: file2.data.length,
+      })
+    } else {
+      console.warn("Arquivos não disponíveis para comparação detalhada", {
+        file1: !!file1,
+        file2: !!file2,
+        file1Data: file1 ? !!file1.data : false,
+        file2Data: file2 ? !!file2.data : false,
+      })
+    }
+  }, [file1, file2])
 
   const normalizedData = useMemo(() => {
     return data.map((item) => ({
@@ -97,58 +123,75 @@ export function ComparisonTable({
 
   // Função para mostrar detalhes do item
   const showItemDetails = (itemName: string) => {
-    if (!file1 || !file2) return
+    console.log("showItemDetails chamado para:", itemName)
 
-    // Encontrar os registros correspondentes nos arquivos originais
-    // Vamos buscar todos os registros que correspondem ao nome para ter uma visão completa
-    const matchingItems1 = file1.data.filter((item) => item.nome_clifor === itemName)
-    const matchingItems2 = file2.data.filter((item) => item.nome_clifor === itemName)
+    if (!filesAvailable) {
+      console.error("Arquivos não disponíveis para comparação detalhada")
+      return
+    }
 
-    // Se não encontrarmos pelo nome_clifor, podemos tentar outras abordagens
-    if (matchingItems1.length === 0 && matchingItems2.length === 0) {
-      // Tentar buscar por código ou outro identificador
-      console.log("Não foi possível encontrar registros pelo nome, tentando outras abordagens")
+    try {
+      // Primeiro, vamos tentar encontrar pelo nome exato
+      let item1Data: CommissionData | null = null
+      let item2Data: CommissionData | null = null
 
-      // Verificar se o nome pode ser um código de produto
-      const byCode1 = file1.data.filter((item) => item.codigo_item === itemName)
-      const byCode2 = file2.data.filter((item) => item.codigo_item === itemName)
+      // Buscar no arquivo 1
+      const matchingItems1 = file1!.data.filter(
+        (item) => item.nome_clifor === itemName || item.codigo_item === itemName || item.cnpj_cliente === itemName,
+      )
 
-      if (byCode1.length > 0 || byCode2.length > 0) {
-        setDetailItem1(byCode1.length > 0 ? byCode1[0] : null)
-        setDetailItem2(byCode2.length > 0 ? byCode2[0] : null)
-        setSelectedItem(itemName)
-        setIsDetailModalOpen(true)
-        return
+      // Buscar no arquivo 2
+      const matchingItems2 = file2!.data.filter(
+        (item) => item.nome_clifor === itemName || item.codigo_item === itemName || item.cnpj_cliente === itemName,
+      )
+
+      console.log("Itens encontrados:", {
+        arquivo1: matchingItems1.length,
+        arquivo2: matchingItems2.length,
+      })
+
+      // Se encontramos registros, use o primeiro
+      if (matchingItems1.length > 0) {
+        item1Data = matchingItems1[0]
       }
 
-      // Se ainda não encontrou, pode ser que o nome seja exatamente o que está na tabela
-      // Neste caso, vamos criar registros parciais com os dados que temos
-      const tableItem = tableData.find((item) => item.name === itemName)
-      if (tableItem) {
-        const partialItem1 = {
-          id: "partial-1",
-          nome_clifor: itemName,
-          valor_comissao_total: tableItem[file1Alias] || 0,
-        } as unknown as CommissionData
-
-        const partialItem2 = {
-          id: "partial-2",
-          nome_clifor: itemName,
-          valor_comissao_total: tableItem[file2Alias] || 0,
-        } as unknown as CommissionData
-
-        setDetailItem1(partialItem1)
-        setDetailItem2(partialItem2)
-        setSelectedItem(itemName)
-        setIsDetailModalOpen(true)
-        return
+      if (matchingItems2.length > 0) {
+        item2Data = matchingItems2[0]
       }
-    } else {
-      // Usar o primeiro registro encontrado para cada arquivo
-      setDetailItem1(matchingItems1.length > 0 ? matchingItems1[0] : null)
-      setDetailItem2(matchingItems2.length > 0 ? matchingItems2[0] : null)
+
+      // Se não encontramos nada, criar registros parciais
+      if (!item1Data && !item2Data) {
+        console.log("Criando registros parciais para:", itemName)
+
+        // Encontrar o item na tabela
+        const tableItem = tableData.find((item) => item.name === itemName)
+
+        if (tableItem) {
+          item1Data = {
+            id: "partial-1",
+            nome_clifor: itemName,
+            valor_comissao_total: tableItem[file1Alias] || 0,
+          } as unknown as CommissionData
+
+          item2Data = {
+            id: "partial-2",
+            nome_clifor: itemName,
+            valor_comissao_total: tableItem[file2Alias] || 0,
+          } as unknown as CommissionData
+        }
+      }
+
+      console.log("Dados para o modal:", { item1Data, item2Data })
+
+      // Definir os estados e abrir o modal
+      setDetailItem1(item1Data)
+      setDetailItem2(item2Data)
       setSelectedItem(itemName)
       setIsDetailModalOpen(true)
+
+      console.log("Modal deveria estar aberto agora:", { isDetailModalOpen: true })
+    } catch (error) {
+      console.error("Erro ao processar detalhes:", error)
     }
   }
 
@@ -180,8 +223,10 @@ export function ComparisonTable({
           title={row.getValue("name")}
           onClick={(e) => {
             e.stopPropagation() // Evitar propagação para não disparar o evento da linha também
-            console.log("Clicou no nome:", row.getValue("name"))
-            showItemDetails(row.getValue("name"))
+            if (filesAvailable) {
+              console.log("Clicou no nome:", row.getValue("name"))
+              showItemDetails(row.getValue("name"))
+            }
           }}
         >
           {row.getValue("name")}
@@ -316,6 +361,28 @@ export function ComparisonTable({
         }
       },
     },
+    {
+      id: "actions",
+      header: "Ações",
+      cell: ({ row }) => {
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (filesAvailable) {
+                console.log("Botão de detalhes clicado para:", row.getValue("name"))
+                showItemDetails(row.getValue("name"))
+              }
+            }}
+            disabled={!filesAvailable}
+          >
+            Ver Detalhes
+          </Button>
+        )
+      },
+    },
   ]
 
   const table = useReactTable({
@@ -337,6 +404,16 @@ export function ComparisonTable({
 
   return (
     <div className="space-y-4">
+      {!filesAvailable && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Não foi possível carregar os dados completos para comparação detalhada. Por favor, tente recarregar a página
+            ou selecione outros arquivos.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -367,6 +444,7 @@ export function ComparisonTable({
           size="sm"
           onClick={() => applySpecificFilter("new-items")}
           className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+          disabled={!filesAvailable}
         >
           Novos Itens
         </Button>
@@ -375,6 +453,7 @@ export function ComparisonTable({
           size="sm"
           onClick={() => applySpecificFilter("removed-items")}
           className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+          disabled={!filesAvailable}
         >
           Itens Removidos
         </Button>
@@ -383,6 +462,7 @@ export function ComparisonTable({
           size="sm"
           onClick={() => applySpecificFilter("significant-changes")}
           className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
+          disabled={!filesAvailable}
         >
           Alterações Significativas
         </Button>
@@ -431,8 +511,10 @@ export function ComparisonTable({
                     className={`${rowClass} hover:bg-muted/50 cursor-pointer`}
                     data-state={row.getIsSelected() && "selected"}
                     onClick={() => {
-                      console.log("Clicou na linha:", row.getValue("name"))
-                      showItemDetails(row.getValue("name"))
+                      if (filesAvailable) {
+                        console.log("Clicou na linha:", row.getValue("name"))
+                        showItemDetails(row.getValue("name"))
+                      }
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -452,10 +534,13 @@ export function ComparisonTable({
         </Table>
       </div>
 
-      {/* Modal de detalhes do item */}
+      {/* Modal de detalhes do item - sempre renderizado, mas visível apenas quando isDetailModalOpen=true */}
       <DetailedComparisonModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          console.log("Fechando modal")
+          setIsDetailModalOpen(false)
+        }}
         item1={detailItem1}
         item2={detailItem2}
         file1Name={file1Name}

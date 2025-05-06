@@ -1,8 +1,18 @@
 import { v4 as uuidv4 } from "uuid"
 import type { ProcessedFile } from "@/types/file-types"
+import path from "path"
+import fs from "fs"
 
 // Chave para armazenamento no localStorage
 const STORAGE_KEY = "processedFiles"
+
+// Diretório onde os arquivos serão armazenados (para API routes)
+const UPLOAD_DIR = path.join(process.cwd(), "uploads")
+
+// Garantir que o diretório existe
+if (typeof window === "undefined" && !fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+}
 
 // Função para salvar um arquivo processado
 export function saveProcessedFile(file: ProcessedFile): void {
@@ -122,4 +132,29 @@ export function importData(jsonData: string): boolean {
     console.error("Erro ao importar dados:", error)
     return false
   }
+}
+
+// Funções para API routes
+export function saveFile(buffer: Buffer, originalName: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      const timestamp = Date.now()
+      const filename = `${timestamp}-${originalName.replace(/\s+/g, "_")}`
+      const filePath = path.join(UPLOAD_DIR, filename)
+
+      fs.writeFileSync(filePath, buffer)
+      resolve(filename)
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+export function getFilePath(filename: string): string {
+  return path.join(UPLOAD_DIR, filename)
+}
+
+export function listFiles(): string[] {
+  if (typeof window !== "undefined" || !fs.existsSync(UPLOAD_DIR)) return []
+  return fs.readdirSync(UPLOAD_DIR)
 }
