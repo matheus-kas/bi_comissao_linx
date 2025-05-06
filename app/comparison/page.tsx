@@ -14,35 +14,11 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type { ProcessedFile } from "@/types/file-types"
 
-// Definir interface para os itens de comparação
-interface ComparisonItem {
-  name: string
-  difference: number
-  percentChange: number
-  [key: string]: string | number // Para valores dinâmicos com nomes de arquivo
-}
-
-// Definir interface para os dados de comparação
-interface ComparisonData {
-  clientData: ComparisonItem[]
-  productData: ComparisonItem[]
-  summary: {
-    totalCommission1: number
-    totalCommission2: number
-    totalDifference: number
-    totalPercentChange: number
-    uniqueClientsFile1: number
-    uniqueClientsFile2: number
-    uniqueProductsFile1: number
-    uniqueProductsFile2: number
-  }
-}
-
 export default function ComparisonPage() {
   const [files, setFiles] = useState<ProcessedFile[]>([])
   const [file1Id, setFile1Id] = useState<string>("")
   const [file2Id, setFile2Id] = useState<string>("")
-  const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null)
+  const [comparisonData, setComparisonData] = useState<any>(null)
   const [comparisonMode, setComparisonMode] = useState<"dual" | "multi">("dual")
 
   // Simulação de carregamento de dados
@@ -73,8 +49,8 @@ export default function ComparisonPage() {
     if (!file1 || !file2) return
 
     // Simulação de comparação (em um cenário real, isso seria feito pelo processador de arquivos)
-    const clientComparisonData: ComparisonItem[] = []
-    const productComparisonData: ComparisonItem[] = []
+    const clientComparisonData = []
+    const productComparisonData = []
 
     // Mapear clientes do arquivo 1
     const clientMap1 = new Map<string, number>()
@@ -300,7 +276,7 @@ export default function ComparisonPage() {
                       <EnhancedChart
                         title="Comparação por Cliente"
                         description="Top 10 clientes com maiores diferenças"
-                        data={comparisonData.clientData.slice(0, 10).map((item: ComparisonItem) => ({
+                        data={comparisonData.clientData.slice(0, 10).map((item) => ({
                           name: item.name,
                           value: item.difference,
                         }))}
@@ -312,7 +288,7 @@ export default function ComparisonPage() {
                       <EnhancedChart
                         title="Comparação por Produto"
                         description="Top 10 produtos com maiores diferenças"
-                        data={comparisonData.productData.slice(0, 10).map((item: ComparisonItem) => ({
+                        data={comparisonData.productData.slice(0, 10).map((item) => ({
                           name: item.name,
                           value: item.difference,
                         }))}

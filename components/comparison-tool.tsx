@@ -9,6 +9,9 @@ import { ComparisonTable } from "@/components/comparison-table"
 import { ComparisonCharts } from "@/components/comparison-charts"
 import type { ProcessedFile } from "@/types/file-types"
 import { PlusCircle, MinusCircle, AlertCircle } from "lucide-react"
+import { CNPJComparison } from "@/components/cnpj-comparison"
+import { PercentageAnalysis } from "@/components/percentage-analysis"
+import { ValueReconciliation } from "@/components/value-reconciliation"
 
 interface ComparisonToolProps {
   files: ProcessedFile[]
@@ -128,6 +131,14 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
     return mergedData
   }, [file1, file2])
 
+  console.log("ComparisonTool - Arquivos selecionados:", {
+    file1Id,
+    file2Id,
+    file1: file1 ? { id: file1.id, name: file1.name, dataLength: file1.data.length } : null,
+    file2: file2 ? { id: file2.id, name: file2.name, dataLength: file2.data.length } : null,
+    clientComparisonDataLength: clientComparisonData.length,
+  })
+
   return (
     <div className="space-y-4">
       <Card>
@@ -173,13 +184,25 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
 
       {canCompare ? (
         <Tabs defaultValue="summary">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="summary">Resumo</TabsTrigger>
+            <TabsTrigger value="cnpjs">CNPJs</TabsTrigger>
+            <TabsTrigger value="percentages">Percentuais</TabsTrigger>
+            <TabsTrigger value="reconciliation">Reconciliação</TabsTrigger>
             <TabsTrigger value="charts">Gráficos</TabsTrigger>
             <TabsTrigger value="details">Detalhes</TabsTrigger>
           </TabsList>
           <TabsContent value="summary">
             <ComparisonSummary file1={file1} file2={file2} />
+          </TabsContent>
+          <TabsContent value="cnpjs">
+            <CNPJComparison file1={file1} file2={file2} />
+          </TabsContent>
+          <TabsContent value="percentages">
+            <PercentageAnalysis file1={file1} file2={file2} />
+          </TabsContent>
+          <TabsContent value="reconciliation">
+            <ValueReconciliation file1={file1} file2={file2} />
           </TabsContent>
           <TabsContent value="charts">
             <ComparisonCharts file1={file1} file2={file2} />
@@ -242,6 +265,8 @@ export function ComparisonTool({ files }: ComparisonToolProps) {
               file2Name={file2?.name || "Arquivo 2"}
               file1Alias="arquivo1"
               file2Alias="arquivo2"
+              file1={file1}
+              file2={file2}
             />
           </TabsContent>
         </Tabs>

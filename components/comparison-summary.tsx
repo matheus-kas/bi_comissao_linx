@@ -2,7 +2,8 @@
 
 import { useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from "lucide-react"
+// Adicionar o import para os ícones
+import { ArrowDownIcon, ArrowUpIcon, MinusIcon, CheckCircle, AlertTriangle } from "lucide-react"
 import type { ProcessedFile } from "@/types/file-types"
 
 interface ComparisonSummaryProps {
@@ -60,6 +61,12 @@ export function ComparisonSummary({ file1, file2 }: ComparisonSummaryProps) {
       style: "currency",
       currency: "BRL",
     }).format(value)
+  }
+
+  const doTotalsMatch = (value1: number, value2: number, threshold = 0.01) => {
+    // Considera valores iguais se a diferença for menor que o threshold (0.01%)
+    const percentDiff = Math.abs((value1 - value2) / value1) * 100
+    return percentDiff < threshold
   }
 
   const renderChangeIcon = (value: number) => {
@@ -180,6 +187,25 @@ export function ComparisonSummary({ file1, file2 }: ComparisonSummaryProps) {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </CardContent>
+        <CardContent className="p-4 border-t">
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium">Os valores totais batem?</h3>
+            {doTotalsMatch(file1.summary.totalCommission, file2.summary.totalCommission) ? (
+              <div className="flex items-center text-green-600">
+                <CheckCircle className="h-5 w-5 mr-1" />
+                <span>Sim, os valores totais são equivalentes</span>
+              </div>
+            ) : (
+              <div className="flex items-center text-amber-600">
+                <AlertTriangle className="h-5 w-5 mr-1" />
+                <span>
+                  Não, existe uma diferença de {formatCurrency(comparison.totalCommissionDiff)} (
+                  {comparison.totalCommissionPercent.toFixed(2)}%)
+                </span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

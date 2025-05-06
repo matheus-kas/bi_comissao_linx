@@ -93,30 +93,6 @@ export async function processFile(file: File): Promise<ProcessedFile> {
   })
 }
 
-// Adicione uma função para verificar e corrigir valores numéricos durante o processamento
-function processNumericValue(value: any): number {
-  // Se o valor for undefined, null ou string vazia, retorne 0
-  if (value === undefined || value === null || value === "") return 0
-
-  // Se já for um número, retorne diretamente - mesmo que seja NaN
-  if (typeof value === "number") return value
-
-  // Se for string, tente converter para número
-  if (typeof value === "string") {
-    // Remover símbolos de moeda e converter vírgula para ponto
-    const valueStr = value
-      .replace(/[R$\s]/g, "") // Remover R$ e espaços
-      .replace(/\./g, "") // Remover pontos de milhar
-      .replace(",", ".") // Substituir vírgula decimal por ponto
-
-    const parsedValue = Number.parseFloat(valueStr)
-    return parsedValue // Retorne o valor mesmo que seja NaN
-  }
-
-  // Para outros tipos, tente converter diretamente
-  return Number(value) // Retorne o valor mesmo que seja NaN
-}
-
 // Adicione esta nova função para processar registros usando o mapeamento de cabeçalhos
 function processRecordsWithHeaders(
   jsonData: any[],
@@ -134,26 +110,26 @@ function processRecordsWithHeaders(
   }
 
   // Função para processar valor numérico com segurança
-  // const processNumericValue = (value: any): number => {
-  //   if (value === undefined || value === null || value === "") return 0
+  const processNumericValue = (value: any): number => {
+    if (value === undefined || value === null || value === "") return 0
 
-  //   // Se já for um número, retornar diretamente
-  //   if (typeof value === "number") return value
+    // Se já for um número, retornar diretamente
+    if (typeof value === "number") return value
 
-  //   // Se for string, converter para número com cuidado
-  //   if (typeof value === "string") {
-  //     // Remover símbolos de moeda e converter vírgula para ponto
-  //     const valueStr = value
-  //       .replace(/[R$\s]/g, "") // Remover R$ e espaços
-  //       .replace(/\./g, "") // Remover pontos de milhar
-  //       .replace(",", ".") // Substituir vírgula decimal por ponto
+    // Se for string, converter para número com cuidado
+    if (typeof value === "string") {
+      // Remover símbolos de moeda e converter vírgula para ponto
+      const valueStr = value
+        .replace(/[R$\s]/g, "") // Remover R$ e espaços
+        .replace(/\./g, "") // Remover pontos de milhar
+        .replace(",", ".") // Substituir vírgula decimal por ponto
 
-  //     return Number.parseFloat(valueStr) || 0
-  //   }
+      return Number.parseFloat(valueStr) || 0
+    }
 
-  //   // Tentar converter outros tipos
-  //   return Number(value) || 0
-  // }
+    // Tentar converter outros tipos
+    return Number(value) || 0
+  }
 
   return jsonData.slice(1).map((row, index) => {
     // Pular a primeira linha (cabeçalhos)

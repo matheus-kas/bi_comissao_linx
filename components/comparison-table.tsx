@@ -15,7 +15,9 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { TrendingUp, TrendingDown, Minus, Search } from "lucide-react"
+import { DetailedComparisonModal } from "@/components/detailed-comparison-modal"
+import type { ProcessedFile, CommissionData } from "@/types/file-types"
 
 interface ComparisonTableProps {
   data: any[]
@@ -23,6 +25,8 @@ interface ComparisonTableProps {
   file2Name: string
   file1Alias?: string
   file2Alias?: string
+  file1?: ProcessedFile
+  file2?: ProcessedFile
 }
 
 export function ComparisonTable({
@@ -31,6 +35,8 @@ export function ComparisonTable({
   file2Name,
   file1Alias = "arquivo1",
   file2Alias = "arquivo2",
+  file1,
+  file2,
 }: ComparisonTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "difference", desc: true }])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -47,6 +53,12 @@ export function ComparisonTable({
   }, [data, file1Name, file2Name, file1Alias, file2Alias])
 
   const [tableData, setTableData] = useState(normalizedData)
+
+  // Estado para controlar o modal de detalhes
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<string | null>(null)
+  const [detailItem1, setDetailItem1] = useState<CommissionData | null>(null)
+  const [detailItem2, setDetailItem2] = useState<CommissionData | null>(null)
 
   // Atualizar dados da tabela quando os dados de entrada mudarem
   useEffect(() => {
@@ -83,16 +95,60 @@ export function ComparisonTable({
     }
   }
 
-  // Estado para controlar o modal de detalhes
-  const [showDetails, setShowDetails] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<any>(null)
+  // Função para mostrar detalhes do item
+  const showItemDetails = (itemName: string) => {
+    if (!file1 || !file2) return
 
-  // Função para mostrar detalhes do cliente
-  const showClientDetails = (client: string) => {
-    const clientData = data.find((item) => item.name === client)
-    if (clientData) {
-      setSelectedClient(clientData)
-      setShowDetails(true)
+    // Encontrar os registros correspondentes nos arquivos originais
+    // Vamos buscar todos os registros que correspondem ao nome para ter uma visão completa
+    const matchingItems1 = file1.data.filter((item) => item.nome_clifor === itemName)
+    const matchingItems2 = file2.data.filter((item) => item.nome_clifor === itemName)
+
+    // Se não encontrarmos pelo nome_clifor, podemos tentar outras abordagens
+    if (matchingItems1.length === 0 && matchingItems2.length === 0) {
+      // Tentar buscar por código ou outro identificador
+      console.log("Não foi possível encontrar registros pelo nome, tentando outras abordagens")
+
+      // Verificar se o nome pode ser um código de produto
+      const byCode1 = file1.data.filter((item) => item.codigo_item === itemName)
+      const byCode2 = file2.data.filter((item) => item.codigo_item === itemName)
+
+      if (byCode1.length > 0 || byCode2.length > 0) {
+        setDetailItem1(byCode1.length > 0 ? byCode1[0] : null)
+        setDetailItem2(byCode2.length > 0 ? byCode2[0] : null)
+        setSelectedItem(itemName)
+        setIsDetailModalOpen(true)
+        return
+      }
+
+      // Se ainda não encontrou, pode ser que o nome seja exatamente o que está na tabela
+      // Neste caso, vamos criar registros parciais com os dados que temos
+      const tableItem = tableData.find((item) => item.name === itemName)
+      if (tableItem) {
+        const partialItem1 = {
+          id: "partial-1",
+          nome_clifor: itemName,
+          valor_comissao_total: tableItem[file1Alias] || 0,
+        } as unknown as CommissionData
+
+        const partialItem2 = {
+          id: "partial-2",
+          nome_clifor: itemName,
+          valor_comissao_total: tableItem[file2Alias] || 0,
+        } as unknown as CommissionData
+
+        setDetailItem1(partialItem1)
+        setDetailItem2(partialItem2)
+        setSelectedItem(itemName)
+        setIsDetailModalOpen(true)
+        return
+      }
+    } else {
+      // Usar o primeiro registro encontrado para cada arquivo
+      setDetailItem1(matchingItems1.length > 0 ? matchingItems1[0] : null)
+      setDetailItem2(matchingItems2.length > 0 ? matchingItems2[0] : null)
+      setSelectedItem(itemName)
+      setIsDetailModalOpen(true)
     }
   }
 
@@ -122,7 +178,11 @@ export function ComparisonTable({
         <div
           className="max-w-[200px] truncate cursor-pointer text-primary hover:underline"
           title={row.getValue("name")}
-          onClick={() => showClientDetails(row.getValue("name"))}
+          onClick={(e) => {
+            e.stopPropagation() // Evitar propagação para não disparar o evento da linha também
+            console.log("Clicou no nome:", row.getValue("name"))
+            showItemDetails(row.getValue("name"))
+          }}
         >
           {row.getValue("name")}
         </div>
@@ -278,12 +338,15 @@ export function ComparisonTable({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Input
-          placeholder="Filtrar todos os campos..."
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm"
-        />
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filtrar todos os campos..."
+            value={globalFilter ?? ""}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            className="pl-8"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -363,7 +426,15 @@ export function ComparisonTable({
                 }
 
                 return (
-                  <TableRow key={row.id} className={rowClass} data-state={row.getIsSelected() && "selected"}>
+                  <TableRow
+                    key={row.id}
+                    className={`${rowClass} hover:bg-muted/50 cursor-pointer`}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => {
+                      console.log("Clicou na linha:", row.getValue("name"))
+                      showItemDetails(row.getValue("name"))
+                    }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}
@@ -381,104 +452,15 @@ export function ComparisonTable({
         </Table>
       </div>
 
-      {/* Modal de detalhes do cliente */}
-      {showDetails && selectedClient && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[80vh] overflow-auto">
-            <div className="p-4 border-b sticky top-0 bg-background">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">{selectedClient.name}</h3>
-                <Button variant="ghost" size="sm" onClick={() => setShowDetails(false)}>
-                  ✕
-                </Button>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Arquivo 1: {file1Name}</h4>
-                  <p className="text-2xl font-bold">{formatCurrency(selectedClient[file1Alias])}</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium">Arquivo 2: {file2Name}</h4>
-                  <p className="text-2xl font-bold">{formatCurrency(selectedClient[file2Alias])}</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="border rounded-md p-4">
-                  <h4 className="font-medium mb-2">Análise da Alteração</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Diferença:</span>
-                      <span
-                        className={
-                          selectedClient.difference > 0
-                            ? "text-green-600"
-                            : selectedClient.difference < 0
-                              ? "text-red-600"
-                              : ""
-                        }
-                      >
-                        {formatCurrency(selectedClient.difference)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Variação Percentual:</span>
-                      <span
-                        className={
-                          selectedClient.percentChange > 0
-                            ? "text-green-600"
-                            : selectedClient.percentChange < 0
-                              ? "text-red-600"
-                              : ""
-                        }
-                      >
-                        {selectedClient.percentChange > 0 ? "+" : ""}
-                        {selectedClient.percentChange.toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Status:</span>
-                      <span>
-                        {selectedClient[file1Alias] === 0 && selectedClient[file2Alias] > 0
-                          ? "Novo item"
-                          : selectedClient[file1Alias] > 0 && selectedClient[file2Alias] === 0
-                            ? "Item removido"
-                            : "Valor alterado"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border rounded-md p-4">
-                  <h4 className="font-medium mb-2">Detalhes da Alteração</h4>
-                  <p>
-                    {selectedClient[file1Alias] === 0 && selectedClient[file2Alias] > 0
-                      ? `Item adicionado com valor de ${formatCurrency(selectedClient[file2Alias])}`
-                      : selectedClient[file1Alias] > 0 && selectedClient[file2Alias] === 0
-                        ? `Item removido que tinha valor de ${formatCurrency(selectedClient[file1Alias])}`
-                        : `${Math.abs(selectedClient.percentChange) > 10 ? "Alteração significativa" : "Alteração"} na comissão de ${formatCurrency(Math.abs(selectedClient.difference))}`}
-                  </p>
-
-                  {selectedClient[file1Alias] > 0 && selectedClient[file2Alias] > 0 && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {selectedClient.percentChange > 0
-                        ? `Aumento de ${Math.abs(selectedClient.percentChange).toFixed(2)}% em relação ao período anterior.`
-                        : `Redução de ${Math.abs(selectedClient.percentChange).toFixed(2)}% em relação ao período anterior.`}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="p-4 border-t sticky bottom-0 bg-background">
-              <Button onClick={() => setShowDetails(false)} className="w-full">
-                Fechar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de detalhes do item */}
+      <DetailedComparisonModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        item1={detailItem1}
+        item2={detailItem2}
+        file1Name={file1Name}
+        file2Name={file2Name}
+      />
     </div>
   )
 }
