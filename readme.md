@@ -1,7 +1,7 @@
 # 📊 Analisador de Comissões Linx
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ialinformatica/analisador-comissoes/main/public/logo.png" alt="Logo IAL Soluções" width="200"/>
+  <img src="./public/logo.png" alt="Logo IAL Soluções" width="200"/>
 </p>
 
 <p align="center">
@@ -268,7 +268,7 @@ Encontrou algum problema? Entre em contato:
 
 <p align="center">
   <a href="https://ialinformatica.com.br">
-    <img src="https://raw.githubusercontent.com/ialinformatica/analisador-comissoes/main/public/logo-footer.png" alt="IAL Soluções" width="150"/>
+    <img src="./public/logo.png" alt="IAL Soluções" width="150"/>
   </a>
   <br>
   <small>Desenvolvido com ❤️ pela <a href="https://ialinformatica.com.br">IAL SOLUÇÕES</a></small>
