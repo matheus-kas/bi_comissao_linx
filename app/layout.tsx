@@ -8,8 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Analisador de Comissões - IAL SOLUCOES",
-  description: "Sistema para análise, comparação e visualização de dados de comissões recebidas pela Linx",
-    generator: 'v0.dev'
+  description: "Sistema para análise, comparação e visualização de dados de comissões recebidas pela franquia Linx",
 }
 
 export default function RootLayout({
@@ -20,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           {children}
         </ThemeProvider>
       </body>
